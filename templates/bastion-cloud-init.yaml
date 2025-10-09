@@ -1,0 +1,158 @@
+#cloud-config
+# VexxHost Tailscale Bastion Host Cloud-Init Script
+# Purpose: Creates ephemeral bastion host for GitHub Actions Packer builds
+# Usage: Used during openstack server create with --user-data flag
+
+# System Configuration
+hostname: ${BASTION_HOSTNAME}
+manage_etc_hosts: true
+
+# Update system packages on first boot
+package_update: true
+package_upgrade: true
+
+# Install required packages
+packages:
+  # Essential utilities
+  - curl
+  - wget
+  - jq
+  - unzip
+  - git
+  
+  # Network tools
+  - netcat
+  - net-tools
+  - iputils-ping
+  - traceroute
+  
+  # Security
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  
+  # Build tools (optional)
+  - build-essential
+  - python3
+  - python3-pip
+
+# Configure system files
+write_files:
+  # Enable IP forwarding for network routing
+  - path: /etc/sysctl.d/99-tailscale.conf
+    content: |
+      # Enable IPv4 forwarding
+      net.ipv4.ip_forward = 1
+      
+      # Enable IPv6 forwarding
+      net.ipv6.conf.all.forwarding = 1
+      
+      # Increase connection tracking table size
+      net.netfilter.nf_conntrack_max = 131072
+    permissions: '0644'
+  
+  # Bastion initialization script
+  - path: /usr/local/bin/bastion-init.sh
+    content: |
+      #!/bin/bash
+      set -e
+      
+      echo "[$(date)] Bastion initialization started" | tee -a /var/log/bastion-init.log
+      
+      # Wait for network to be ready
+      until ping -c 1 8.8.8.8 &>/dev/null; do
+        echo "Waiting for network..." | tee -a /var/log/bastion-init.log
+        sleep 2
+      done
+      
+      echo "[$(date)] Network is ready" | tee -a /var/log/bastion-init.log
+      
+      # Install Tailscale
+      echo "[$(date)] Installing Tailscale..." | tee -a /var/log/bastion-init.log
+      curl -fsSL https://tailscale.com/install.sh | sh
+      
+      # Start Tailscale
+      echo "[$(date)] Starting Tailscale..." | tee -a /var/log/bastion-init.log
+      tailscale up \
+        --authkey="${TAILSCALE_AUTH_KEY}" \
+        --hostname="${BASTION_HOSTNAME}" \
+        --advertise-tags=tag:bastion \
+        --ssh \
+        --accept-routes \
+        --accept-dns=false
+      
+      # Get Tailscale IP
+      TAILSCALE_IP=$(tailscale ip -4)
+      echo "[$(date)] Tailscale connected with IP: ${TAILSCALE_IP}" | tee -a /var/log/bastion-init.log
+      
+      # Optional: Install Packer (uncomment if needed on bastion)
+      # echo "[$(date)] Installing Packer..." | tee -a /var/log/bastion-init.log
+      # wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      # echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
+      # apt-get update && apt-get install -y packer
+      
+      # Verify installations
+      echo "[$(date)] Verifying installations..." | tee -a /var/log/bastion-init.log
+      tailscale version | tee -a /var/log/bastion-init.log
+      
+      # Create ready marker
+      echo "READY" > /tmp/bastion-ready
+      echo "[$(date)] Bastion initialization complete" | tee -a /var/log/bastion-init.log
+      
+      # Display status
+      echo "=== Bastion Status ===" | tee -a /var/log/bastion-init.log
+      echo "Hostname: $(hostname)" | tee -a /var/log/bastion-init.log
+      echo "Tailscale IP: ${TAILSCALE_IP}" | tee -a /var/log/bastion-init.log
+      echo "======================" | tee -a /var/log/bastion-init.log
+    permissions: '0755'
+  
+  # MOTD banner for SSH users
+  - path: /etc/motd
+    content: |
+      ╔═══════════════════════════════════════════════════════╗
+      ║     VexxHost Tailscale Bastion Host                  ║
+      ║     GitHub Actions Packer Build Environment          ║
+      ╚═══════════════════════════════════════════════════════╝
+      
+      This is an ephemeral bastion host for automated builds.
+      It will be automatically destroyed after use.
+      
+      Logs: /var/log/bastion-init.log
+      Status: cat /tmp/bastion-ready
+      
+    permissions: '0644'
+
+# System timezone
+timezone: UTC
+
+# User configuration
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    groups: sudo
+    lock_passwd: true
+
+# SSH configuration
+ssh_pwauth: false
+disable_root: false
+
+# Commands to run after packages are installed
+runcmd:
+  # Apply sysctl settings
+  - sysctl -p /etc/sysctl.d/99-tailscale.conf
+  
+  # Run bastion initialization script
+  - /usr/local/bin/bastion-init.sh
+
+# Cloud-init completion message
+final_message: |
+  ╔═══════════════════════════════════════════════════════╗
+  ║  Bastion host initialization completed successfully   ║
+  ║  System uptime: $UPTIME                              ║
+  ║  Cloud-init took $TIMESTAMP seconds                  ║
+  ╚═══════════════════════════════════════════════════════╝
+  
+  Check /var/log/bastion-init.log for detailed logs.
+  Check /tmp/bastion-ready to verify bastion is ready.
