@@ -1,9 +1,9 @@
 # Ubuntu 22.04 Builder Configuration
 
-# Base image from OpenStack
-base_image = "Ubuntu 22.04"
+# Base image from OpenStack (source image to build from)
+base_image = "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
 
-# Image naming
+# Image naming (output image name)
 image_name = "ubuntu-2204-builder-{{isotime \"2006-01-02-1504\"}}"
 
 # Instance configuration
