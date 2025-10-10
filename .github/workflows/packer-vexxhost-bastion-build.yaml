@@ -111,7 +111,7 @@ jobs:
       - name: Setup Tailscale VPN
         uses: tailscale/github-action@v2
         with:
-          oauth-key: ${{ secrets.TAILSCALE_OAUTH_KEY }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_KEY }}
           tags: tag:ci
           hostname: github-runner-${{ github.run_id }}
 
