@@ -213,7 +213,7 @@ build {
 
   # Run baseline provisioning
   provisioner "shell" {
-    script = "${path.root}/provision/baseline.sh"
+    script = "../provision/baseline.sh"
     environment_vars = [
       "DISTRO=${var.distro}"
     ]
