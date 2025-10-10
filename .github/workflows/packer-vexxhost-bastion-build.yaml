@@ -393,17 +393,45 @@ jobs:
         with:
           version: ${{ env.PACKER_VERSION }}
 
-      - name: Create Packer cloud environment file
+      - name: Create Packer cloud environment JSON
+        env:
+          VEXXHOST_AUTH_URL: ${{ secrets.VEXXHOST_AUTH_URL }}
+          VEXXHOST_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
+          VEXXHOST_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
+          VEXXHOST_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
+          VEXXHOST_PASSWORD: ${{ secrets.VEXXHOST_PASSWORD }}
+          VEXXHOST_NETWORK: ${{ env.OPENSTACK_NETWORK }}
+        run: |
+          # Decode password if base64 encoded version exists, otherwise use plain
+          if [ -n "$VEXXHOST_PASSWORD_B64" ]; then
+            CLOUD_PASS=$(echo "$VEXXHOST_PASSWORD_B64" | base64 --decode)
+          else
+            CLOUD_PASS="$VEXXHOST_PASSWORD"
+          fi
+          
+          # Create cloud-env.json for Packer
+          cat > "${GITHUB_WORKSPACE}/cloud-env.json" <<EOF
+          {
+            "cloud_auth_url": "${VEXXHOST_AUTH_URL}",
+            "cloud_tenant": "${VEXXHOST_PROJECT_ID}",
+            "cloud_user": "${VEXXHOST_USERNAME}",
+            "cloud_pass": "${CLOUD_PASS}",
+            "cloud_network": "${VEXXHOST_NETWORK}",
+            "ssh_proxy_host": "${{ env.BASTION_IP }}"
+          }
+          EOF
+          
+          echo "✅ Cloud environment JSON created at ${GITHUB_WORKSPACE}/cloud-env.json"
+          echo "   SSH Proxy Host: ${{ env.BASTION_IP }}"
+
+      - name: Create Packer cloud environment HCL (optional)
         if: env.CLOUD_ENV_B64 != ''
         env:
           CLOUD_ENV_B64: ${{ secrets.CLOUD_ENV_B64 }}
         run: |
           if [ -n "$CLOUD_ENV_B64" ]; then
             echo "$CLOUD_ENV_B64" | base64 --decode > "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
-            echo "✅ Cloud environment file created"
-          else
-            echo "⚠️ CLOUD_ENV_B64 secret not set, skipping cloud-env file"
-            touch "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
+            echo "✅ Cloud environment HCL file created"
           fi
 
       - name: Create OpenStack clouds.yaml
@@ -476,8 +504,8 @@ jobs:
               export PACKER_LOG=1
               export PACKER_LOG_PATH="${GITHUB_WORKSPACE}/logs/validate-${varfile##*/}-${template##*/}.log"
               
-              # Build packer validate command conditionally
-              PACKER_CMD="packer validate"
+              # Build packer validate command with cloud-env.json
+              PACKER_CMD="packer validate -var-file=${GITHUB_WORKSPACE}/cloud-env.json"
               if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
                 PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
               fi
@@ -544,8 +572,8 @@ jobs:
               
               echo "🔨 Building $template with $varfile via bastion ${{ env.BASTION_IP }}..."
               
-              # Build packer build command conditionally
-              PACKER_CMD="packer build"
+              # Build packer build command with cloud-env.json
+              PACKER_CMD="packer build -var-file=${GITHUB_WORKSPACE}/cloud-env.json"
               if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
                 PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
               fi
