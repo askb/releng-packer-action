@@ -476,11 +476,14 @@ jobs:
               export PACKER_LOG=1
               export PACKER_LOG_PATH="${GITHUB_WORKSPACE}/logs/validate-${varfile##*/}-${template##*/}.log"
               
-              if packer validate \
-                   -var-file="${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" \
-                   -var-file="$varfile" \
-                   -var="bastion_host=${{ env.BASTION_IP }}" \
-                   "$template"; then
+              # Build packer validate command conditionally
+              PACKER_CMD="packer validate"
+              if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
+                PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
+              fi
+              PACKER_CMD="$PACKER_CMD -var-file=$varfile -var=bastion_host=${{ env.BASTION_IP }} $template"
+              
+              if $PACKER_CMD; then
                 echo "✅ $template validated with $varfile"
               else
                 echo "❌ Validation failed for $template with $varfile"
@@ -541,12 +544,14 @@ jobs:
               
               echo "🔨 Building $template with $varfile via bastion ${{ env.BASTION_IP }}..."
               
-              if packer build \
-                   -var-file="${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" \
-                   -var-file="$varfile" \
-                   -var="bastion_host=${{ env.BASTION_IP }}" \
-                   -var="bastion_user=root" \
-                   "$template"; then
+              # Build packer build command conditionally
+              PACKER_CMD="packer build"
+              if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
+                PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
+              fi
+              PACKER_CMD="$PACKER_CMD -var-file=$varfile -var=bastion_host=${{ env.BASTION_IP }} -var=bastion_user=root $template"
+              
+              if $PACKER_CMD; then
                 echo "✅ Successfully built $template with $varfile"
                 build_count=$((build_count + 1))
               else
