@@ -230,7 +230,8 @@ build {
       "sudo rm -rf /var/lib/cloud/instances/*",
       "sudo rm -f /etc/machine-id",
       "sudo touch /etc/machine-id",
-      "history -c",
+      "sudo rm -f ~/.bash_history || true",
+      "sudo rm -f /root/.bash_history || true",
       "echo 'Cleanup completed'"
     ]
   }
