@@ -139,12 +139,22 @@ jobs:
           OS_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
           OS_PROJECT_NAME: ${{ secrets.VEXXHOST_PROJECT_NAME }}
           OS_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
-          OS_PASSWORD: ${{ secrets.VEXXHOST_PASSWORD }}
+          OS_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
+          OS_PASSWORD_PLAIN: ${{ secrets.VEXXHOST_PASSWORD }}
           OS_REGION_NAME: ${{ secrets.VEXXHOST_REGION }}
           OS_IDENTITY_API_VERSION: "3"
           OS_USER_DOMAIN_NAME: "Default"
           OS_PROJECT_DOMAIN_NAME: "Default"
         run: |
+          # Decode password if base64 encoded version exists, otherwise use plain
+          if [ -n "$OS_PASSWORD_B64" ]; then
+            OS_PASSWORD=$(echo "$OS_PASSWORD_B64" | base64 --decode)
+            echo "🔐 Using base64-decoded password"
+          else
+            OS_PASSWORD="$OS_PASSWORD_PLAIN"
+            echo "⚠️  Using plain password (consider using VEXXHOST_PASSWORD_B64)"
+          fi
+
           echo "OS_AUTH_URL=${OS_AUTH_URL}" >> $GITHUB_ENV
           echo "OS_PROJECT_ID=${OS_PROJECT_ID}" >> $GITHUB_ENV
           echo "OS_PROJECT_NAME=${OS_PROJECT_NAME}" >> $GITHUB_ENV
