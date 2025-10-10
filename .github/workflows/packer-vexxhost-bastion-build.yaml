@@ -50,7 +50,6 @@ concurrency:
 
 env:
   PACKER_VERSION: "1.11.2"
-  OS_CLOUD: "vex"
   BASTION_NAME: "bastion-gh-${{ github.run_id }}"
   BASTION_WAIT_TIMEOUT: 300
   OPENSTACK_FLAVOR: ${{ inputs.bastion_flavor || 'v3-standard-2' }}
@@ -440,7 +439,7 @@ jobs:
               export PACKER_LOG=1
               export PACKER_LOG_PATH="${GITHUB_WORKSPACE}/logs/validate-${varfile##*/}-${template##*/}.log"
               
-              if OS_CLOUD=${{ env.OS_CLOUD }} packer validate \
+              if packer validate \
                    -var-file="${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" \
                    -var-file="$varfile" \
                    -var="bastion_host=${{ env.BASTION_IP }}" \
@@ -505,7 +504,7 @@ jobs:
               
               echo "🔨 Building $template with $varfile via bastion ${{ env.BASTION_IP }}..."
               
-              if OS_CLOUD=${{ env.OS_CLOUD }} packer build \
+              if packer build \
                    -var-file="${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" \
                    -var-file="$varfile" \
                    -var="bastion_host=${{ env.BASTION_IP }}" \
