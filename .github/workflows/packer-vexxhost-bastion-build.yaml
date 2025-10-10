@@ -27,7 +27,7 @@ on:
         description: "Base image for bastion host"
         required: false
         type: string
-        default: "Ubuntu 22.04"
+        default: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
       bastion_network:
         description: "Network for bastion host"
         required: false
@@ -63,7 +63,7 @@ env:
   BASTION_NAME: "bastion-gh-${{ github.run_id }}"
   BASTION_WAIT_TIMEOUT: 300
   OPENSTACK_FLAVOR: ${{ inputs.bastion_flavor || 'v3-standard-4' }}
-  OPENSTACK_IMAGE: ${{ inputs.bastion_image || 'Ubuntu 22.04' }}
+  OPENSTACK_IMAGE: ${{ inputs.bastion_image || 'Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]' }}
   OPENSTACK_NETWORK: ${{ inputs.bastion_network || 'odlci' }}
   OPENSTACK_SSH_KEY: ${{ inputs.ssh_key_name || '' }}
 
