@@ -112,7 +112,6 @@ jobs:
         uses: tailscale/github-action@v2
         with:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_KEY }}
-          tags: tag:ci
           hostname: github-runner-${{ github.run_id }}
 
       - name: Verify Tailscale connection
