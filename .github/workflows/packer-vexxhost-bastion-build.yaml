@@ -28,6 +28,16 @@ on:
         required: false
         type: string
         default: "Ubuntu 22.04"
+      bastion_network:
+        description: "Network for bastion host"
+        required: false
+        type: string
+        default: "odlci"
+      ssh_key_name:
+        description: "SSH key name for bastion (optional, Tailscale SSH used by default)"
+        required: false
+        type: string
+        default: ""
       debug_mode:
         description: "Enable debug logging"
         required: false
@@ -52,9 +62,10 @@ env:
   PACKER_VERSION: "1.11.2"
   BASTION_NAME: "bastion-gh-${{ github.run_id }}"
   BASTION_WAIT_TIMEOUT: 300
-  OPENSTACK_FLAVOR: ${{ inputs.bastion_flavor || 'v3-standard-2' }}
+  OPENSTACK_FLAVOR: ${{ inputs.bastion_flavor || 'v3-standard-4' }}
   OPENSTACK_IMAGE: ${{ inputs.bastion_image || 'Ubuntu 22.04' }}
-  OPENSTACK_NETWORK: "default"
+  OPENSTACK_NETWORK: ${{ inputs.bastion_network || 'odlci' }}
+  OPENSTACK_SSH_KEY: ${{ inputs.ssh_key_name || '' }}
 
 jobs:
   prepare:
@@ -290,13 +301,26 @@ jobs:
         run: |
           echo "🚀 Launching bastion instance..."
           
-          openstack server create \
-            --flavor "${{ env.OPENSTACK_FLAVOR }}" \
-            --image "${{ env.OPENSTACK_IMAGE }}" \
-            --network "${{ env.OPENSTACK_NETWORK }}" \
-            --user-data cloud-init.yaml \
-            --wait \
-            "${{ env.BASTION_NAME }}"
+          # Build openstack command with optional SSH key
+          CMD="openstack server create"
+          CMD="$CMD --flavor '${{ env.OPENSTACK_FLAVOR }}'"
+          CMD="$CMD --image '${{ env.OPENSTACK_IMAGE }}'"
+          CMD="$CMD --nic net-id=${{ env.OPENSTACK_NETWORK }}"
+          
+          # Add SSH key if specified
+          if [ -n "${{ env.OPENSTACK_SSH_KEY }}" ]; then
+            CMD="$CMD --key-name ${{ env.OPENSTACK_SSH_KEY }}"
+            echo "📝 Using SSH key: ${{ env.OPENSTACK_SSH_KEY }}"
+          else
+            echo "📝 No SSH key specified - using Tailscale SSH only"
+          fi
+          
+          CMD="$CMD --user-data cloud-init.yaml"
+          CMD="$CMD --wait"
+          CMD="$CMD '${{ env.BASTION_NAME }}'"
+          
+          echo "Running: $CMD"
+          eval $CMD
           
           echo "✅ Bastion instance created"
           
