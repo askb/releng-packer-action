@@ -194,7 +194,7 @@ jobs:
           # Create cloud-init from template or inline
           if [ -f "templates/bastion-cloud-init.yaml" ]; then
             echo "Using cloud-init template from repository..."
-            envsubst < templates/bastion-cloud-init.yaml > cloud-init.yaml
+            envsubst '${BASTION_HOSTNAME} ${TAILSCALE_AUTH_KEY}' < templates/bastion-cloud-init.yaml > cloud-init.yaml
           else
             echo "Creating inline cloud-init configuration..."
             cat > cloud-init.yaml <<'EOFCI'
