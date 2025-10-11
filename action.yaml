@@ -132,7 +132,7 @@ runs:
     # ========================================
     - name: Setup Tailscale VPN
       if: inputs.mode == 'build'
-      uses: tailscale/github-action@v2
+      uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92  # v2.0.3
       with:
         authkey: ${{ inputs.tailscale_auth_key }}
         version: ${{ inputs.tailscale_version }}
@@ -151,7 +151,7 @@ runs:
     # ========================================
     - name: Setup Python and OpenStack CLI
       if: inputs.mode == 'build'
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a20  # v5.3.0
       with:
         python-version: "3.11"
 
@@ -277,7 +277,7 @@ runs:
     # Step 4: Setup Packer
     # ========================================
     - name: Setup Packer
-      uses: hashicorp/setup-packer@main
+      uses: hashicorp/setup-packer@35a288e72c00399c0ae4c0c15b0e435e7896e903  # main (pinned to specific commit)
       with:
         version: ${{ inputs.packer_version }}
 
