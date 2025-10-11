@@ -7,6 +7,16 @@ description: "Build OpenStack images using Packer through a Tailscale bastion ho
 author: "The Linux Foundation"
 
 inputs:
+  # Operation Mode
+  mode:
+    description: "Operation mode: 'validate' (syntax check only) or 'build' (full build with bastion)"
+    required: false
+    default: "build"
+    type: choice
+    options:
+      - validate
+      - build
+  
   # Packer Configuration
   packer_template:
     description: "Path to Packer template file (relative to packer_working_dir)"
@@ -22,6 +32,10 @@ inputs:
     description: "Packer version to use"
     required: false
     default: "1.11.2"
+  os_cloud:
+    description: "OpenStack cloud name from clouds.yaml (optional)"
+    required: false
+    default: ""
   
   # Cloud Configuration Files (base64 encoded)
   cloud_env_json:
@@ -75,10 +89,11 @@ inputs:
     required: false
     default: "300"
   
-  # Tailscale Configuration
+  # Tailscale Configuration (required for build mode only)
   tailscale_auth_key:
-    description: "Tailscale auth key for bastion and runner"
-    required: true
+    description: "Tailscale auth key for bastion and runner (required for build mode)"
+    required: false
+    default: ""
   tailscale_version:
     description: "Tailscale version"
     required: false
@@ -100,22 +115,23 @@ inputs:
 
 outputs:
   bastion_ip:
-    description: "Tailscale IP of the bastion host"
+    description: "Tailscale IP of the bastion host (build mode only)"
     value: ${{ steps.get-bastion-ip.outputs.bastion_ip }}
-  build_status:
-    description: "Status of the Packer build (success/failure)"
-    value: ${{ steps.packer-build.outputs.status }}
-  image_name:
-    description: "Name of the built image"
-    value: ${{ steps.packer-build.outputs.image_name }}
+  status:
+    description: "Status of the operation (success/failure)"
+    value: ${{ steps.packer-operation.outputs.status || steps.packer-validate.outputs.status }}
+  mode:
+    description: "Mode that was executed (validate/build)"
+    value: ${{ inputs.mode }}
 
 runs:
   using: "composite"
   steps:
     # ========================================
-    # Step 1: Setup Tailscale VPN
+    # Step 1: Setup Tailscale VPN (Build Mode Only)
     # ========================================
     - name: Setup Tailscale VPN
+      if: inputs.mode == 'build'
       uses: tailscale/github-action@v2
       with:
         authkey: ${{ inputs.tailscale_auth_key }}
@@ -124,26 +140,30 @@ runs:
         hostname: github-runner-${{ github.run_id }}
 
     - name: Verify Tailscale connection
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         echo "✅ Tailscale status:"
         sudo tailscale status
 
     # ========================================
-    # Step 2: Setup OpenStack CLI
+    # Step 2: Setup OpenStack CLI (Build Mode Only)
     # ========================================
     - name: Setup Python and OpenStack CLI
+      if: inputs.mode == 'build'
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
     - name: Install OpenStack CLI
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         python -m pip install --upgrade pip
         pip install python-openstackclient
 
     - name: Configure OpenStack credentials
+      if: inputs.mode == 'build'
       shell: bash
       env:
         OS_AUTH_URL: ${{ inputs.vexxhost_auth_url }}
@@ -169,9 +189,10 @@ runs:
         echo "OS_PROJECT_DOMAIN_NAME=Default" >> $GITHUB_ENV
 
     # ========================================
-    # Step 3: Create and Launch Bastion Host
+    # Step 3: Create and Launch Bastion Host (Build Mode Only)
     # ========================================
     - name: Create cloud-init script for bastion
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         BASTION_NAME="bastion-gh-${{ github.run_id }}"
@@ -213,6 +234,7 @@ runs:
         echo "BASTION_NAME=$BASTION_NAME" >> $GITHUB_ENV
 
     - name: Launch bastion instance
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         openstack server create \
@@ -224,6 +246,7 @@ runs:
           "${{ env.BASTION_NAME }}"
 
     - name: Wait for bastion to join Tailscale
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         timeout=${{ inputs.bastion_wait_timeout }}
@@ -244,6 +267,7 @@ runs:
         exit 1
 
     - name: Export bastion IP
+      if: inputs.mode == 'build'
       id: get-bastion-ip
       shell: bash
       run: |
@@ -257,7 +281,8 @@ runs:
       with:
         version: ${{ inputs.packer_version }}
 
-    - name: Create cloud environment JSON
+    - name: Create cloud environment JSON (Build Mode)
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         # Decode cloud_env_json if base64 encoded
@@ -274,14 +299,15 @@ runs:
         echo "✅ Cloud environment JSON created with bastion IP: ${{ env.BASTION_IP }}"
 
     - name: Create clouds.yaml (optional)
-      shell: bash
       if: inputs.clouds_yaml != ''
+      shell: bash
       run: |
         mkdir -p "$HOME/.config/openstack"
         echo "${{ inputs.clouds_yaml }}" | base64 -d > "$HOME/.config/openstack/clouds.yaml"
         echo "✅ OpenStack clouds.yaml created"
 
-    - name: Setup SSH agent
+    - name: Setup SSH agent (Build Mode)
+      if: inputs.mode == 'build'
       shell: bash
       run: |
         eval "$(ssh-agent -s)"
@@ -290,7 +316,7 @@ runs:
         echo "✅ SSH agent started"
 
     # ========================================
-    # Step 5: Run Packer Build
+    # Step 5: Run Packer Operation
     # ========================================
     - name: Initialize Packer
       shell: bash
@@ -301,19 +327,41 @@ runs:
     - name: Validate Packer template
       shell: bash
       working-directory: ${{ inputs.packer_working_dir }}
+      env:
+        OS_CLOUD: ${{ inputs.os_cloud }}
       run: |
-        packer validate \
-          -var-file="${{ github.workspace }}/cloud-env.json" \
-          -var-file="${{ inputs.packer_vars_file }}" \
-          -var="bastion_host=${{ env.BASTION_IP }}" \
-          "${{ inputs.packer_template }}"
+        set -e
+        
+        VALIDATE_CMD="packer validate"
+        
+        # Build mode: use cloud-env.json and bastion
+        if [ "${{ inputs.mode }}" == "build" ]; then
+          VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.json"
+          VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ inputs.packer_vars_file }}"
+          VALIDATE_CMD="$VALIDATE_CMD -var=bastion_host=${{ env.BASTION_IP }}"
+        else
+          # Validate mode: just syntax check with vars
+          VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ inputs.packer_vars_file }}"
+        fi
+        
+        VALIDATE_CMD="$VALIDATE_CMD ${{ inputs.packer_template }}"
+        
+        echo "Running: $VALIDATE_CMD"
+        if $VALIDATE_CMD; then
+          echo "✅ Packer validation successful"
+        else
+          echo "❌ Packer validation failed"
+          exit 1
+        fi
 
-    - name: Build with Packer
-      id: packer-build
+    - name: Build with Packer (Build Mode Only)
+      if: inputs.mode == 'build'
+      id: packer-operation
       shell: bash
       working-directory: ${{ inputs.packer_working_dir }}
       env:
         PACKER_LOG: ${{ inputs.debug_mode == 'true' && '1' || '0' }}
+        OS_CLOUD: ${{ inputs.os_cloud }}
       run: |
         set +e
         packer build \
@@ -328,17 +376,26 @@ runs:
         if [ $BUILD_EXIT_CODE -eq 0 ]; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "✅ Packer build completed successfully"
+          exit 0
         else
           echo "status=failure" >> $GITHUB_OUTPUT
           echo "❌ Packer build failed with exit code $BUILD_EXIT_CODE"
           exit $BUILD_EXIT_CODE
         fi
+    
+    - name: Set validation success output (Validate Mode)
+      if: inputs.mode == 'validate'
+      id: packer-validate
+      shell: bash
+      run: |
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "✅ Packer validation completed successfully"
 
     # ========================================
     # Step 6: Cleanup
     # ========================================
     - name: Cleanup bastion instance
-      if: always()
+      if: always() && inputs.mode == 'build'
       shell: bash
       run: |
         openstack server delete --wait "${{ env.BASTION_NAME }}" || true

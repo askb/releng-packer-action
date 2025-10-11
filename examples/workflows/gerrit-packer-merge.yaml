@@ -1,0 +1,122 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# Example: Gerrit-triggered Packer build workflow (for merged changes)
+# This workflow builds Packer images when changes are merged
+
+name: Gerrit Packer Merge (Build)
+
+on:
+  workflow_dispatch:
+    inputs:
+      GERRIT_BRANCH:
+        description: "Branch that change is against"
+        required: true
+        type: string
+      GERRIT_CHANGE_ID:
+        description: "The ID for the change"
+        required: false
+        type: string
+      GERRIT_CHANGE_NUMBER:
+        description: "The Gerrit number"
+        required: false
+        type: string
+      GERRIT_CHANGE_URL:
+        description: "URL to the change"
+        required: false
+        type: string
+      GERRIT_EVENT_TYPE:
+        description: "Type of Gerrit event"
+        required: false
+        type: string
+      GERRIT_PATCHSET_NUMBER:
+        description: "The patch number for the change"
+        required: false
+        type: string
+      GERRIT_PATCHSET_REVISION:
+        description: "The revision sha"
+        required: false
+        type: string
+      GERRIT_PROJECT:
+        description: "Project in Gerrit"
+        required: true
+        type: string
+      GERRIT_REFSPEC:
+        description: "Gerrit refspec of change"
+        required: false
+        type: string
+      # Build-specific inputs
+      platform:
+        description: "Platform to build (e.g., ubuntu-22.04)"
+        required: true
+        type: choice
+        options:
+          - centos-7
+          - centos-cs-8
+          - centos-cs-9
+          - ubuntu-20.04
+          - ubuntu-22.04
+          - ubuntu-24.04
+      template:
+        description: "Template to build (e.g., builder)"
+        required: true
+        type: choice
+        options:
+          - builder
+          - docker
+          - helm
+          - robot
+          - mininet-ovs-217
+
+jobs:
+  packer-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.GERRIT_BRANCH }}
+          submodules: true
+      
+      - name: Update submodules
+        run: git submodule update --init
+      
+      - name: Build Packer Image
+        uses: lfit/packer-vexxhost-bastion-action@v1
+        with:
+          mode: build
+          packer_template: "templates/${{ inputs.template }}.pkr.hcl"
+          packer_vars_file: "common-packer/vars/${{ inputs.platform }}.pkrvars.hcl"
+          packer_working_dir: "packer"
+          packer_version: "1.11.2"
+          
+          # Cloud configuration
+          cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
+          clouds_yaml: ${{ secrets.CLOUDS_YAML_B64 }}
+          
+          # VexxHost credentials
+          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
+          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
+          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
+          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
+          vexxhost_region: ${{ secrets.VEXXHOST_REGION || 'ca-ymq-1' }}
+          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          
+          # Bastion configuration
+          bastion_flavor: "v3-standard-2"
+          bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
+          bastion_network: "odlci"
+          
+          # Tailscale
+          tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          
+          # Build options
+          debug_mode: "false"
+          upload_logs: "true"
+      
+      - name: Report build status
+        if: always()
+        run: |
+          echo "### Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platform**: ${{ inputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Template**: ${{ inputs.template }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ inputs.GERRIT_BRANCH }}" >> $GITHUB_STEP_SUMMARY

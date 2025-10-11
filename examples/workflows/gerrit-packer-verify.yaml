@@ -1,0 +1,121 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# Example: Gerrit-triggered Packer validation workflow
+# This workflow validates Packer templates when changes are proposed via Gerrit
+
+name: Gerrit Packer Verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      GERRIT_BRANCH:
+        description: "Branch that change is against"
+        required: true
+        type: string
+      GERRIT_CHANGE_ID:
+        description: "The ID for the change"
+        required: true
+        type: string
+      GERRIT_CHANGE_NUMBER:
+        description: "The Gerrit number"
+        required: true
+        type: string
+      GERRIT_CHANGE_URL:
+        description: "URL to the change"
+        required: true
+        type: string
+      GERRIT_EVENT_TYPE:
+        description: "Type of Gerrit event"
+        required: true
+        type: string
+      GERRIT_PATCHSET_NUMBER:
+        description: "The patch number for the change"
+        required: true
+        type: string
+      GERRIT_PATCHSET_REVISION:
+        description: "The revision sha"
+        required: true
+        type: string
+      GERRIT_PROJECT:
+        description: "Project in Gerrit"
+        required: true
+        type: string
+      GERRIT_REFSPEC:
+        description: "Gerrit refspec of change"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.event.inputs.GERRIT_CHANGE_ID || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clear votes
+        uses: lfit/gerrit-review-action@v0.8
+        with:
+          host: ${{ vars.GERRIT_SERVER }}
+          username: ${{ vars.GERRIT_SSH_USER }}
+          key: ${{ secrets.GERRIT_SSH_PRIVKEY }}
+          known_hosts: ${{ vars.GERRIT_KNOWN_HOSTS }}
+          gerrit-change-number: ${{ inputs.GERRIT_CHANGE_NUMBER }}
+          gerrit-patchset-number: ${{ inputs.GERRIT_PATCHSET_NUMBER }}
+          vote-type: clear
+      - name: Allow replication
+        run: sleep 10s
+
+  packer-validator:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Gerrit Change
+        uses: lfit/checkout-gerrit-change-action@v0.9
+        with:
+          gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
+          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
+          gerrit-url: ${{ vars.GERRIT_URL }}
+          delay: "0s"
+          submodules: "true"  # Important: checkout common-packer submodule
+      
+      - name: Update submodules
+        run: git submodule update --init
+      
+      - name: Check for packer changes
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          base: ${{ inputs.GERRIT_BRANCH }}
+          ref: ${{ inputs.GERRIT_PATCHSET_REVISION }}
+          filters: |
+            src:
+              - 'packer/**'
+      
+      - name: Validate Packer Templates
+        if: steps.changes.outputs.src == 'true'
+        uses: lfit/packer-vexxhost-bastion-action@v1
+        with:
+          mode: validate
+          packer_template: "templates/builder.pkr.hcl"
+          packer_vars_file: "common-packer/vars/ubuntu-22.04.pkrvars.hcl"
+          packer_working_dir: "packer"
+          packer_version: "1.11.2"
+          # No bastion/Tailscale inputs needed for validate mode
+
+  vote:
+    if: ${{ always() }}
+    needs: [prepare, packer-validator]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: im-open/workflow-conclusion@v2.2.3
+      - name: Set vote
+        uses: lfit/gerrit-review-action@v0.8
+        with:
+          host: ${{ vars.GERRIT_SERVER }}
+          username: ${{ vars.GERRIT_SSH_USER }}
+          key: ${{ secrets.GERRIT_SSH_PRIVKEY }}
+          known_hosts: ${{ vars.GERRIT_KNOWN_HOSTS }}
+          gerrit-change-number: ${{ inputs.GERRIT_CHANGE_NUMBER }}
+          gerrit-patchset-number: ${{ inputs.GERRIT_PATCHSET_NUMBER }}
+          vote-type: ${{ env.WORKFLOW_CONCLUSION }}
