@@ -1,0 +1,345 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025 The Linux Foundation
+
+name: "Packer Build with VexxHost Tailscale Bastion"
+description: "Build OpenStack images using Packer through a Tailscale bastion host"
+author: "The Linux Foundation"
+
+inputs:
+  # Packer Configuration
+  packer_template:
+    description: "Path to Packer template file (relative to packer_working_dir)"
+    required: true
+  packer_vars_file:
+    description: "Path to Packer variables file (relative to packer_working_dir)"
+    required: true
+  packer_working_dir:
+    description: "Working directory containing Packer files"
+    required: false
+    default: "."
+  packer_version:
+    description: "Packer version to use"
+    required: false
+    default: "1.11.2"
+  
+  # Cloud Configuration Files (base64 encoded)
+  cloud_env_json:
+    description: "Cloud environment JSON configuration (base64 encoded)"
+    required: true
+  clouds_yaml:
+    description: "OpenStack clouds.yaml configuration (base64 encoded, optional)"
+    required: false
+    default: ""
+  
+  # VexxHost/OpenStack Credentials
+  vexxhost_auth_url:
+    description: "VexxHost/OpenStack auth URL"
+    required: true
+  vexxhost_project_id:
+    description: "VexxHost/OpenStack project/tenant ID"
+    required: true
+  vexxhost_username:
+    description: "VexxHost/OpenStack username"
+    required: true
+  vexxhost_password:
+    description: "VexxHost/OpenStack password (will be base64 decoded if needed)"
+    required: true
+  vexxhost_region:
+    description: "VexxHost/OpenStack region"
+    required: false
+    default: "ca-ymq-1"
+  vexxhost_network_id:
+    description: "VexxHost/OpenStack network UUID for Packer builds"
+    required: true
+  
+  # Bastion Configuration
+  bastion_flavor:
+    description: "OpenStack flavor for bastion instance"
+    required: false
+    default: "v3-standard-2"
+  bastion_image:
+    description: "Base image for bastion host"
+    required: false
+    default: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
+  bastion_network:
+    description: "Network name for bastion host"
+    required: false
+    default: "odlci"
+  bastion_ssh_key:
+    description: "SSH key name for bastion (optional, Tailscale SSH used by default)"
+    required: false
+    default: ""
+  bastion_wait_timeout:
+    description: "Timeout in seconds to wait for bastion to be ready"
+    required: false
+    default: "300"
+  
+  # Tailscale Configuration
+  tailscale_auth_key:
+    description: "Tailscale auth key for bastion and runner"
+    required: true
+  tailscale_version:
+    description: "Tailscale version"
+    required: false
+    default: "latest"
+  
+  # Build Options
+  debug_mode:
+    description: "Enable debug logging"
+    required: false
+    default: "false"
+  upload_logs:
+    description: "Upload build logs as artifacts"
+    required: false
+    default: "true"
+  log_retention_days:
+    description: "Days to retain log artifacts"
+    required: false
+    default: "30"
+
+outputs:
+  bastion_ip:
+    description: "Tailscale IP of the bastion host"
+    value: ${{ steps.get-bastion-ip.outputs.bastion_ip }}
+  build_status:
+    description: "Status of the Packer build (success/failure)"
+    value: ${{ steps.packer-build.outputs.status }}
+  image_name:
+    description: "Name of the built image"
+    value: ${{ steps.packer-build.outputs.image_name }}
+
+runs:
+  using: "composite"
+  steps:
+    # ========================================
+    # Step 1: Setup Tailscale VPN
+    # ========================================
+    - name: Setup Tailscale VPN
+      uses: tailscale/github-action@v2
+      with:
+        authkey: ${{ inputs.tailscale_auth_key }}
+        version: ${{ inputs.tailscale_version }}
+        tags: tag:ci
+        hostname: github-runner-${{ github.run_id }}
+
+    - name: Verify Tailscale connection
+      shell: bash
+      run: |
+        echo "✅ Tailscale status:"
+        sudo tailscale status
+
+    # ========================================
+    # Step 2: Setup OpenStack CLI
+    # ========================================
+    - name: Setup Python and OpenStack CLI
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install OpenStack CLI
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-openstackclient
+
+    - name: Configure OpenStack credentials
+      shell: bash
+      env:
+        OS_AUTH_URL: ${{ inputs.vexxhost_auth_url }}
+        OS_PROJECT_ID: ${{ inputs.vexxhost_project_id }}
+        OS_USERNAME: ${{ inputs.vexxhost_username }}
+        OS_PASSWORD: ${{ inputs.vexxhost_password }}
+        OS_REGION_NAME: ${{ inputs.vexxhost_region }}
+      run: |
+        # Check if password is base64 encoded and decode if needed
+        if echo "$OS_PASSWORD" | base64 -d &>/dev/null; then
+          PASSWORD=$(echo "$OS_PASSWORD" | base64 -d)
+        else
+          PASSWORD="$OS_PASSWORD"
+        fi
+        
+        echo "OS_AUTH_URL=${OS_AUTH_URL}" >> $GITHUB_ENV
+        echo "OS_PROJECT_ID=${OS_PROJECT_ID}" >> $GITHUB_ENV
+        echo "OS_USERNAME=${OS_USERNAME}" >> $GITHUB_ENV
+        echo "OS_PASSWORD=${PASSWORD}" >> $GITHUB_ENV
+        echo "OS_REGION_NAME=${OS_REGION_NAME}" >> $GITHUB_ENV
+        echo "OS_IDENTITY_API_VERSION=3" >> $GITHUB_ENV
+        echo "OS_USER_DOMAIN_NAME=Default" >> $GITHUB_ENV
+        echo "OS_PROJECT_DOMAIN_NAME=Default" >> $GITHUB_ENV
+
+    # ========================================
+    # Step 3: Create and Launch Bastion Host
+    # ========================================
+    - name: Create cloud-init script for bastion
+      shell: bash
+      run: |
+        BASTION_NAME="bastion-gh-${{ github.run_id }}"
+        
+        cat > cloud-init.yaml <<'EOF'
+        #cloud-config
+        hostname: ${BASTION_HOSTNAME}
+        manage_etc_hosts: true
+        package_update: true
+        package_upgrade: true
+        packages:
+          - curl
+          - wget
+          - jq
+          - net-tools
+        write_files:
+          - path: /usr/local/bin/bastion-init.sh
+            content: |
+              #!/bin/bash
+              set -e
+              echo "[$(date)] Installing Tailscale..."
+              curl -fsSL https://tailscale.com/install.sh | sh
+              tailscale up --authkey="${TAILSCALE_AUTH_KEY}" \
+                --hostname="${BASTION_HOSTNAME}" \
+                --advertise-tags=tag:bastion \
+                --ssh --accept-routes --accept-dns=false
+              TAILSCALE_IP=$(tailscale ip -4)
+              echo "[$(date)] Tailscale IP: ${TAILSCALE_IP}"
+              echo "READY" > /tmp/bastion-ready
+            permissions: '0755'
+        runcmd:
+          - /usr/local/bin/bastion-init.sh
+        EOF
+        
+        # Substitute variables
+        sed -i "s/\${BASTION_HOSTNAME}/$BASTION_NAME/g" cloud-init.yaml
+        sed -i "s/\${TAILSCALE_AUTH_KEY}/${{ inputs.tailscale_auth_key }}/g" cloud-init.yaml
+        
+        echo "BASTION_NAME=$BASTION_NAME" >> $GITHUB_ENV
+
+    - name: Launch bastion instance
+      shell: bash
+      run: |
+        openstack server create \
+          --flavor "${{ inputs.bastion_flavor }}" \
+          --image "${{ inputs.bastion_image }}" \
+          --nic net-id=${{ inputs.bastion_network }} \
+          --user-data cloud-init.yaml \
+          --wait \
+          "${{ env.BASTION_NAME }}"
+
+    - name: Wait for bastion to join Tailscale
+      shell: bash
+      run: |
+        timeout=${{ inputs.bastion_wait_timeout }}
+        elapsed=0
+        
+        while [ $elapsed -lt $timeout ]; do
+          if sudo tailscale status | grep -q "${{ env.BASTION_NAME }}"; then
+            BASTION_IP=$(sudo tailscale status | grep "${{ env.BASTION_NAME }}" | awk '{print $1}')
+            echo "✅ Bastion joined Tailscale: $BASTION_IP"
+            echo "BASTION_IP=$BASTION_IP" >> $GITHUB_ENV
+            exit 0
+          fi
+          sleep 5
+          elapsed=$((elapsed + 5))
+        done
+        
+        echo "❌ Bastion failed to join Tailscale within ${timeout}s"
+        exit 1
+
+    - name: Export bastion IP
+      id: get-bastion-ip
+      shell: bash
+      run: |
+        echo "bastion_ip=${{ env.BASTION_IP }}" >> $GITHUB_OUTPUT
+
+    # ========================================
+    # Step 4: Setup Packer
+    # ========================================
+    - name: Setup Packer
+      uses: hashicorp/setup-packer@main
+      with:
+        version: ${{ inputs.packer_version }}
+
+    - name: Create cloud environment JSON
+      shell: bash
+      run: |
+        # Decode cloud_env_json if base64 encoded
+        if echo "${{ inputs.cloud_env_json }}" | base64 -d &>/dev/null 2>&1; then
+          echo "${{ inputs.cloud_env_json }}" | base64 -d > cloud-env.json
+        else
+          echo '${{ inputs.cloud_env_json }}' > cloud-env.json
+        fi
+        
+        # Update ssh_proxy_host with bastion IP
+        jq --arg ip "${{ env.BASTION_IP }}" '.ssh_proxy_host = $ip' cloud-env.json > cloud-env.tmp.json
+        mv cloud-env.tmp.json cloud-env.json
+        
+        echo "✅ Cloud environment JSON created with bastion IP: ${{ env.BASTION_IP }}"
+
+    - name: Create clouds.yaml (optional)
+      shell: bash
+      if: inputs.clouds_yaml != ''
+      run: |
+        mkdir -p "$HOME/.config/openstack"
+        echo "${{ inputs.clouds_yaml }}" | base64 -d > "$HOME/.config/openstack/clouds.yaml"
+        echo "✅ OpenStack clouds.yaml created"
+
+    - name: Setup SSH agent
+      shell: bash
+      run: |
+        eval "$(ssh-agent -s)"
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+        echo "✅ SSH agent started"
+
+    # ========================================
+    # Step 5: Run Packer Build
+    # ========================================
+    - name: Initialize Packer
+      shell: bash
+      working-directory: ${{ inputs.packer_working_dir }}
+      run: |
+        packer init "${{ inputs.packer_template }}"
+
+    - name: Validate Packer template
+      shell: bash
+      working-directory: ${{ inputs.packer_working_dir }}
+      run: |
+        packer validate \
+          -var-file="${{ github.workspace }}/cloud-env.json" \
+          -var-file="${{ inputs.packer_vars_file }}" \
+          -var="bastion_host=${{ env.BASTION_IP }}" \
+          "${{ inputs.packer_template }}"
+
+    - name: Build with Packer
+      id: packer-build
+      shell: bash
+      working-directory: ${{ inputs.packer_working_dir }}
+      env:
+        PACKER_LOG: ${{ inputs.debug_mode == 'true' && '1' || '0' }}
+      run: |
+        set +e
+        packer build \
+          -var-file="${{ github.workspace }}/cloud-env.json" \
+          -var-file="${{ inputs.packer_vars_file }}" \
+          -var="bastion_host=${{ env.BASTION_IP }}" \
+          -var="bastion_user=root" \
+          "${{ inputs.packer_template }}"
+        
+        BUILD_EXIT_CODE=$?
+        
+        if [ $BUILD_EXIT_CODE -eq 0 ]; then
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "✅ Packer build completed successfully"
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "❌ Packer build failed with exit code $BUILD_EXIT_CODE"
+          exit $BUILD_EXIT_CODE
+        fi
+
+    # ========================================
+    # Step 6: Cleanup
+    # ========================================
+    - name: Cleanup bastion instance
+      if: always()
+      shell: bash
+      run: |
+        openstack server delete --wait "${{ env.BASTION_NAME }}" || true
+        echo "✅ Bastion instance cleaned up"
