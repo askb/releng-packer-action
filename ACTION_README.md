@@ -158,25 +158,29 @@ Then add the contents of `cloud-env-b64.txt` as a GitHub secret.
 
 ### 1. Tailscale ACL Configuration
 
-Your Tailscale ACL must allow SSH connections from CI runners to bastion hosts:
+Your Tailscale ACL must allow SSH connections from CI runners to bastion hosts.
+
+**See [docs/TAILSCALE_SETUP.md](docs/TAILSCALE_SETUP.md) for complete Tailscale configuration guide.**
+
+Quick reference - required ACL rules:
 
 ```json
 {
   "tagOwners": {
-    "tag:ci": ["autogroup:admin"],
-    "tag:bastion": ["autogroup:admin"]
+    "tag:ci": ["autogroup:admin", "autogroup:owner"],
+    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"]
   },
   "acls": [
     {
       "action": "accept",
-      "src": ["tag:ci", "tag:bastion"],
+      "src": ["autogroup:admin", "tag:ci", "tag:bastion"],
       "dst": ["*:*"]
     }
   ],
   "ssh": [
     {
       "action": "accept",
-      "src": ["tag:ci"],
+      "src": ["autogroup:member", "tag:ci"],
       "dst": ["tag:bastion"],
       "users": ["root", "ubuntu", "autogroup:nonroot"]
     }
