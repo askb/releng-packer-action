@@ -53,4 +53,4 @@ repos:
     hooks:
       - id: prettier
         types_or: [yaml, json, markdown]
-        stages: [commit]
+        stages: [pre-commit]
