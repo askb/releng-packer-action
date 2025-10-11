@@ -12,10 +12,6 @@ inputs:
     description: "Operation mode: 'validate' (syntax check only) or 'build' (full build with bastion)"
     required: false
     default: "build"
-    type: choice
-    options:
-      - validate
-      - build
 
   # Packer Configuration
   packer_template:
