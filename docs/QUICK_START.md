@@ -65,16 +65,16 @@ Go to your repo: **Settings → Secrets and variables → Actions → New reposi
 
 Add these 8 secrets:
 
-| Secret Name              | Value                    | Example                        |
-| ------------------------ | ------------------------ | ------------------------------ |
-| `TAILSCALE_OAUTH_KEY`    | OAuth client secret      | `tskey-client-...`             |
-| `TAILSCALE_AUTH_KEY`     | Auth key from Step 1     | `tskey-auth-...`               |
-| `VEXXHOST_AUTH_URL`      | OpenStack endpoint       | `https://auth.vexxhost.net/v3` |
-| `VEXXHOST_PROJECT_ID`    | Project ID               | `abc123...`                    |
-| `VEXXHOST_PROJECT_NAME`  | Project name             | `my-project`                   |
-| `VEXXHOST_USERNAME`      | Your username            | `user@example.com`             |
-| `VEXXHOST_PASSWORD`      | Your password            | `your-password`                |
-| `VEXXHOST_REGION`        | Region code              | `ca-ymq-1`                     |
+| Secret Name             | Value                | Example                        |
+| ----------------------- | -------------------- | ------------------------------ |
+| `TAILSCALE_OAUTH_KEY`   | OAuth client secret  | `tskey-client-...`             |
+| `TAILSCALE_AUTH_KEY`    | Auth key from Step 1 | `tskey-auth-...`               |
+| `VEXXHOST_AUTH_URL`     | OpenStack endpoint   | `https://auth.vexxhost.net/v3` |
+| `VEXXHOST_PROJECT_ID`   | Project ID           | `abc123...`                    |
+| `VEXXHOST_PROJECT_NAME` | Project name         | `my-project`                   |
+| `VEXXHOST_USERNAME`     | Your username        | `user@example.com`             |
+| `VEXXHOST_PASSWORD`     | Your password        | `your-password`                |
+| `VEXXHOST_REGION`       | Region code          | `ca-ymq-1`                     |
 
 ---
 
@@ -205,8 +205,8 @@ Edit `.github/workflows/packer-vexxhost-bastion-build.yaml`:
 
 ```yaml
 env:
-  OPENSTACK_FLAVOR: "v3-starter-1"  # Smaller instance
-  BASTION_WAIT_TIMEOUT: 600         # Longer timeout
+  OPENSTACK_FLAVOR: "v3-starter-1" # Smaller instance
+  BASTION_WAIT_TIMEOUT: 600 # Longer timeout
 ```
 
 ### Trigger on Push
@@ -333,13 +333,13 @@ openstack server delete test-bastion
 
 You now have:
 
-✅ Automated Packer builds from GitHub Actions  
-✅ Secure VPN connectivity via Tailscale  
-✅ Ephemeral bastion hosts (auto-cleanup)  
-✅ No manual SSH configuration needed  
+✅ Automated Packer builds from GitHub Actions
+✅ Secure VPN connectivity via Tailscale
+✅ Ephemeral bastion hosts (auto-cleanup)
+✅ No manual SSH configuration needed
 ✅ Scalable CI/CD pipeline
 
-**Time to first build:** ~15-20 minutes  
+**Time to first build:** ~15-20 minutes
 **Time for subsequent builds:** Fully automated!
 
 ---

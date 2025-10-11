@@ -5,6 +5,7 @@
 The action now supports **two modes** for Gerrit-based workflows:
 
 ### 1. Validate Mode (Pre-Merge)
+
 - **Purpose**: Syntax validation before merge
 - **When**: Triggered on Gerrit patchset-created
 - **Infrastructure**: Runs on GitHub runner only (no bastion)
@@ -13,6 +14,7 @@ The action now supports **two modes** for Gerrit-based workflows:
 - **Secrets needed**: None (just GERRIT_SSH_PRIVKEY for voting)
 
 ### 2. Build Mode (Post-Merge/Scheduled)
+
 - **Purpose**: Build actual images
 - **When**: After merge or scheduled
 - **Infrastructure**: Creates Tailscale bastion + builds image
@@ -23,9 +25,11 @@ The action now supports **two modes** for Gerrit-based workflows:
 ## 📁 Files Created/Modified
 
 ### Modified
+
 - **action.yaml** - Added mode parameter, conditional steps
 
 ### Created
+
 - **examples/workflows/gerrit-packer-verify.yaml** - Validation workflow
 - **examples/workflows/gerrit-packer-merge.yaml** - Build workflow
 - **examples/workflows/matrix-build-example.yaml** - Matrix builds
@@ -34,20 +38,24 @@ The action now supports **two modes** for Gerrit-based workflows:
 ## 🎯 Key Features
 
 1. **Mode-based execution**
+
    ```yaml
    with:
-     mode: validate  # or 'build'
+     mode: validate # or 'build'
    ```
 
 2. **Conditional infrastructure**
+
    - Validate: No bastion, no Tailscale
    - Build: Full bastion setup
 
 3. **Proper error handling**
+
    - Action exits with error code on failure
    - Caller handles Gerrit voting based on status
 
 4. **Submodule support**
+
    - Caller checks out submodules
    - Works with common-packer structure
 
@@ -60,6 +68,7 @@ The action now supports **two modes** for Gerrit-based workflows:
 ### In releng/builder Repository
 
 1. **Create validation workflow** (`.github/workflows/gerrit-verify.yaml`):
+
    ```yaml
    - uses: lfit/packer-vexxhost-bastion-action@v1
      with:
@@ -70,6 +79,7 @@ The action now supports **two modes** for Gerrit-based workflows:
    ```
 
 2. **Create build workflow** (`.github/workflows/gerrit-merge.yaml`):
+
    ```yaml
    - uses: lfit/packer-vexxhost-bastion-action@v1
      with:
@@ -89,9 +99,11 @@ The action now supports **two modes** for Gerrit-based workflows:
 ## 🔐 Required Secrets by Mode
 
 ### Validate Mode
+
 - `GERRIT_SSH_PRIVKEY` (for voting)
 
 ### Build Mode (includes all from validate)
+
 - `CLOUD_ENV_JSON_B64`
 - `VEXXHOST_AUTH_URL`
 - `VEXXHOST_PROJECT_ID`
@@ -103,10 +115,11 @@ The action now supports **two modes** for Gerrit-based workflows:
 ## 📊 Comparison: Old vs New
 
 ### Before (JJB Only)
+
 ```yaml
 # In Jenkins Job Builder
 - job-template:
-    name: 'gerrit-packer-verify'
+    name: "gerrit-packer-verify"
     builders:
       - shell: |
           cd packer
@@ -114,6 +127,7 @@ The action now supports **two modes** for Gerrit-based workflows:
 ```
 
 ### After (GitHub Actions with this action)
+
 ```yaml
 # In .github/workflows/gerrit-verify.yaml
 - uses: lfit/packer-vexxhost-bastion-action@v1
@@ -126,6 +140,7 @@ The action now supports **two modes** for Gerrit-based workflows:
 ## 🚀 Workflow Flow
 
 ### Gerrit Verify (Pre-Merge)
+
 ```
 Gerrit Change Created
     ↓
@@ -144,6 +159,7 @@ Post Vote to Gerrit (✅ or ❌)
 ```
 
 ### Gerrit Merge (Post-Merge Build)
+
 ```
 Gerrit Change Merged
     ↓
@@ -181,6 +197,7 @@ Publish Image to Cloud
 ## 🎯 Next Steps for Deployment
 
 1. **Test in builder repo:**
+
    ```bash
    # In releng/builder
    cp examples/workflows/gerrit-packer-verify.yaml \
@@ -190,11 +207,13 @@ Publish Image to Cloud
 2. **Configure secrets** in builder repo
 
 3. **Test validation:**
+
    - Create Gerrit change touching packer/
    - Trigger workflow manually
    - Verify vote posted
 
 4. **Test build** (optional for now):
+
    - Create full build workflow
    - Test with one platform+template
    - Verify image created
@@ -208,6 +227,7 @@ Publish Image to Cloud
 ## 💡 Usage Examples
 
 ### Simple Validation
+
 ```yaml
 - uses: lfit/packer-vexxhost-bastion-action@v1
   with:
@@ -218,6 +238,7 @@ Publish Image to Cloud
 ```
 
 ### Matrix Build
+
 ```yaml
 strategy:
   matrix:

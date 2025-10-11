@@ -79,23 +79,23 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 
 Required secrets:
 
-| Secret Name                | Description                    | Example                       |
-| -------------------------- | ------------------------------ | ----------------------------- |
-| `TAILSCALE_OAUTH_KEY`      | OAuth client secret            | `tskey-client-...`            |
-| `TAILSCALE_AUTH_KEY`       | Auth key for bastion           | `tskey-auth-...`              |
-| `VEXXHOST_AUTH_URL`        | OpenStack endpoint             | `https://auth.vexxhost.net/v3` |
-| `VEXXHOST_PROJECT_ID`      | Project ID                     | `abc123...`                   |
-| `VEXXHOST_PROJECT_NAME`    | Project name                   | `my-project`                  |
-| `VEXXHOST_USERNAME`        | Your username                  | `user@example.com`            |
-| `VEXXHOST_PASSWORD`        | Your password                  | `your-password`               |
-| `VEXXHOST_REGION`          | Region code                    | `ca-ymq-1`                    |
+| Secret Name             | Description          | Example                        |
+| ----------------------- | -------------------- | ------------------------------ |
+| `TAILSCALE_OAUTH_KEY`   | OAuth client secret  | `tskey-client-...`             |
+| `TAILSCALE_AUTH_KEY`    | Auth key for bastion | `tskey-auth-...`               |
+| `VEXXHOST_AUTH_URL`     | OpenStack endpoint   | `https://auth.vexxhost.net/v3` |
+| `VEXXHOST_PROJECT_ID`   | Project ID           | `abc123...`                    |
+| `VEXXHOST_PROJECT_NAME` | Project name         | `my-project`                   |
+| `VEXXHOST_USERNAME`     | Your username        | `user@example.com`             |
+| `VEXXHOST_PASSWORD`     | Your password        | `your-password`                |
+| `VEXXHOST_REGION`       | Region code          | `ca-ymq-1`                     |
 
 Optional secrets (if using existing packer templates):
 
-| Secret Name         | Description                         |
-| ------------------- | ----------------------------------- |
-| `CLOUD_ENV_B64`     | Base64 encoded Packer cloud env     |
-| `CLOUDS_YAML_B64`   | Base64 encoded OpenStack clouds.yaml |
+| Secret Name       | Description                          |
+| ----------------- | ------------------------------------ |
+| `CLOUD_ENV_B64`   | Base64 encoded Packer cloud env      |
+| `CLOUDS_YAML_B64` | Base64 encoded OpenStack clouds.yaml |
 
 ### 4. Run Your First Build
 
@@ -124,16 +124,19 @@ Build Targets (VexxHost)
 ### Process Flow
 
 1. **Setup** (30s)
+
    - Checkout code
    - Connect to Tailscale
    - Install OpenStack CLI
 
 2. **Bastion Launch** (60-90s)
+
    - Create cloud-init script
    - Launch VexxHost instance
    - Wait for Tailscale connection
 
 3. **Packer Build** (5-15 min)
+
    - Initialize Packer plugins
    - Validate templates
    - Build images via bastion
@@ -145,13 +148,13 @@ Build Targets (VexxHost)
 
 ### Workflow Inputs
 
-| Input              | Description                  | Default           |
-| ------------------ | ---------------------------- | ----------------- |
-| `packer_template`  | Template to build            | `builder.pkr.hcl` |
-| `packer_vars`      | Vars file filter             | `ubuntu-22.04`    |
-| `bastion_flavor`   | Instance flavor              | `v3-standard-2`   |
-| `bastion_image`    | Base image                   | `Ubuntu 22.04`    |
-| `debug_mode`       | Enable debug logging         | `false`           |
+| Input             | Description          | Default           |
+| ----------------- | -------------------- | ----------------- |
+| `packer_template` | Template to build    | `builder.pkr.hcl` |
+| `packer_vars`     | Vars file filter     | `ubuntu-22.04`    |
+| `bastion_flavor`  | Instance flavor      | `v3-standard-2`   |
+| `bastion_image`   | Base image           | `Ubuntu 22.04`    |
+| `debug_mode`      | Enable debug logging | `false`           |
 
 ## Repository Structure
 
@@ -192,7 +195,7 @@ variable "bastion_user" {
 
 source "openstack" "image" {
   # ... other config ...
-  
+
   # Use bastion for SSH connectivity
   ssh_bastion_host     = var.bastion_host
   ssh_bastion_username = var.bastion_user
@@ -212,6 +215,7 @@ pre-commit run --all-files
 ### Local Testing
 
 **Test OpenStack credentials:**
+
 ```bash
 export OS_AUTH_URL="https://auth.vexxhost.net/v3"
 export OS_PROJECT_NAME="your-project"
@@ -223,11 +227,13 @@ openstack server list
 ```
 
 **Validate Packer templates:**
+
 ```bash
 ./test-templates.sh
 ```
 
 **Test cloud-init syntax:**
+
 ```bash
 cloud-init schema --config-file templates/bastion-cloud-init.yaml
 ```
@@ -236,12 +242,12 @@ cloud-init schema --config-file templates/bastion-cloud-init.yaml
 
 ### Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| OpenStack auth failed | Verify credentials in GitHub secrets |
-| Tailscale timeout | Check auth key settings (ephemeral, reusable) |
-| Bastion not joining | Review cloud-init logs via console |
-| Packer build failed | Enable debug mode, check SSH connectivity |
+| Problem               | Solution                                      |
+| --------------------- | --------------------------------------------- |
+| OpenStack auth failed | Verify credentials in GitHub secrets          |
+| Tailscale timeout     | Check auth key settings (ephemeral, reusable) |
+| Bastion not joining   | Review cloud-init logs via console            |
+| Packer build failed   | Enable debug mode, check SSH connectivity     |
 
 **Detailed troubleshooting:** See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
 
@@ -302,6 +308,7 @@ Copyright (c) 2025 - Licensed under the Apache License, Version 2.0
 ## ⭐ Acknowledgments
 
 Based on patterns from:
+
 - [releng-common-packer](https://github.com/lfit/releng-common-packer) - Packer validation workflows
 - [releng-builder](https://github.com/lfit/releng-builder) - Tailscale bastion implementation
 

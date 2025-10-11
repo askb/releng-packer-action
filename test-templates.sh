@@ -29,7 +29,7 @@ for template in "${TEMPLATE_DIR}"/*.pkr.hcl; do
     if [[ "$template" == *"variables"* ]]; then
         continue
     fi
-    
+
     echo "  Initializing $(basename "$template")..."
     packer init "$template" || {
         echo "❌ Failed to initialize $template"
@@ -56,15 +56,15 @@ for varfile in "${VARS_DIR}"/*.pkrvars.hcl; do
     echo ""
     echo "Testing with: $(basename "$varfile")"
     echo "---"
-    
+
     for template in "${TEMPLATE_DIR}"/*.pkr.hcl; do
         if [[ "$template" == *"variables"* ]]; then
             continue
         fi
-        
+
         template_name=$(basename "$template")
         echo -n "  $template_name ... "
-        
+
         if packer validate \
             -var-file="$varfile" \
             -var="bastion_host=" \

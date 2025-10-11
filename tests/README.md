@@ -5,21 +5,25 @@ Comprehensive test suite for the Packer VexxHost Bastion Action.
 ## Running Tests
 
 ### Install dependencies
+
 ```bash
 pip install -e ".[test]"
 ```
 
 ### Run all tests
+
 ```bash
 pytest
 ```
 
 ### Run with coverage
+
 ```bash
 pytest --cov --cov-report=html
 ```
 
 ### Run specific test file
+
 ```bash
 pytest tests/test_action_yaml.py
 ```
@@ -35,6 +39,7 @@ pytest tests/test_action_yaml.py
 Target coverage: 80%+
 
 Coverage reports are generated in:
+
 - Terminal output
 - `htmlcov/` directory (HTML report)
 - `coverage.xml` (for CI/CD)

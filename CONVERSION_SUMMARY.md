@@ -7,16 +7,19 @@ This repository has been successfully converted from a standalone Packer workflo
 ## Key Files Created
 
 1. **`action.yaml`** - Main composite action definition
+
    - Defines all inputs, outputs, and steps
    - Can be used as: `uses: lfit/packer-vexxhost-bastion-action@v1`
 
 2. **`ACTION_README.md`** - User-facing documentation
+
    - How to use the action
    - Input/output reference
    - Prerequisites and setup guide
    - Troubleshooting
 
 3. **`ACTION_IMPLEMENTATION.md`** - Implementation guide
+
    - Architecture explanation
    - Migration guide
    - Development/testing procedures
@@ -38,25 +41,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build Image
-        uses: lfit/packer-vexxhost-bastion-action@v1  # Or @main for latest
+        uses: lfit/packer-vexxhost-bastion-action@v1 # Or @main for latest
         with:
           # Your Packer files (in caller repo)
           packer_template: "packer/templates/builder.pkr.hcl"
           packer_vars_file: "packer/vars/ubuntu-22.04.pkrvars.hcl"
           packer_working_dir: "packer"
-          
+
           # Cloud config (from secrets)
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
-          
+
           # VexxHost credentials (from secrets)
           vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
           vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
           vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
           vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
           vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          
+
           # Tailscale
           tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
 ```
@@ -80,26 +83,28 @@ packer-vexxhost-bastion-action/
 ## Workflow Comparison
 
 ### Before (Standalone)
+
 - Each repository had its own complete workflow
 - Duplicated bastion setup logic
 - Updates needed in multiple places
 
 ### After (Action)
+
 - Single action used by multiple repositories
 - Bastion logic centralized
 - Updates in one place benefit all users
 
 ## Required Secrets (in Caller Repository)
 
-| Secret | Purpose |
-|--------|---------|
-| `CLOUD_ENV_JSON_B64` | Base64-encoded cloud environment JSON |
-| `VEXXHOST_AUTH_URL` | OpenStack authentication URL |
-| `VEXXHOST_PROJECT_ID` | OpenStack project/tenant ID |
-| `VEXXHOST_USERNAME` | OpenStack username |
-| `VEXXHOST_PASSWORD_B64` | Base64-encoded OpenStack password |
-| `VEXXHOST_NETWORK_ID` | Network UUID for builds |
-| `TAILSCALE_AUTH_KEY` | Tailscale auth key with tag:ci permission |
+| Secret                  | Purpose                                   |
+| ----------------------- | ----------------------------------------- |
+| `CLOUD_ENV_JSON_B64`    | Base64-encoded cloud environment JSON     |
+| `VEXXHOST_AUTH_URL`     | OpenStack authentication URL              |
+| `VEXXHOST_PROJECT_ID`   | OpenStack project/tenant ID               |
+| `VEXXHOST_USERNAME`     | OpenStack username                        |
+| `VEXXHOST_PASSWORD_B64` | Base64-encoded OpenStack password         |
+| `VEXXHOST_NETWORK_ID`   | Network UUID for builds                   |
+| `TAILSCALE_AUTH_KEY`    | Tailscale auth key with tag:ci permission |
 
 ## Action Features
 
@@ -115,6 +120,7 @@ packer-vexxhost-bastion-action/
 ## Next Steps
 
 ### 1. Testing the Action
+
 ```bash
 # In this repository
 gh workflow run packer-vexxhost-bastion-build.yaml
@@ -124,12 +130,14 @@ gh run watch $(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
 ### 2. Create a Release
+
 ```bash
 git tag -a v1.0.0 -m "Initial release"
 git push origin v1.0.0
 ```
 
 ### 3. Use in Another Repository
+
 1. Add required secrets to the caller repository
 2. Create a workflow that uses this action (see examples/)
 3. Commit and push

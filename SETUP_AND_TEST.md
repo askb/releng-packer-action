@@ -6,10 +6,11 @@ Complete step-by-step instructions to set up and test the workflow.
 
 ## 🚀 Quick Setup Overview
 
-**Time Required:** 20-30 minutes  
+**Time Required:** 20-30 minutes
 **Prerequisites:** GitHub account, VexxHost account, Tailscale account
 
 **Steps:**
+
 1. Get Tailscale credentials (5 min)
 2. Get VexxHost credentials (5 min)
 3. Set up GitHub repository (5 min)
@@ -59,6 +60,7 @@ Complete step-by-step instructions to set up and test the workflow.
    - Save it as: `TAILSCALE_AUTH_KEY`
 
 **✅ Checkpoint:** You should now have:
+
 - `TAILSCALE_OAUTH_KEY` (starts with `tskey-client-`)
 - `TAILSCALE_AUTH_KEY` (starts with `tskey-auth-`)
 
@@ -141,6 +143,7 @@ openstack network list
 **Expected output:** List of servers, flavors, images, and networks (may be empty but should not error)
 
 **✅ Checkpoint:** You should now have:
+
 - `VEXXHOST_AUTH_URL`
 - `VEXXHOST_PROJECT_ID`
 - `VEXXHOST_PROJECT_NAME`
@@ -228,11 +231,13 @@ git push -u origin main
 ### 4.2 Add Tailscale Secrets
 
 **Secret 1: TAILSCALE_OAUTH_KEY**
+
 - Name: `TAILSCALE_OAUTH_KEY`
 - Value: Paste your OAuth client secret (starts with `tskey-client-`)
 - Click **Add secret**
 
 **Secret 2: TAILSCALE_AUTH_KEY**
+
 - Name: `TAILSCALE_AUTH_KEY`
 - Value: Paste your auth key (starts with `tskey-auth-`)
 - Click **Add secret**
@@ -240,31 +245,37 @@ git push -u origin main
 ### 4.3 Add VexxHost Secrets
 
 **Secret 3: VEXXHOST_AUTH_URL**
+
 - Name: `VEXXHOST_AUTH_URL`
 - Value: `https://auth.vexxhost.net/v3`
 - Click **Add secret**
 
 **Secret 4: VEXXHOST_PROJECT_ID**
+
 - Name: `VEXXHOST_PROJECT_ID`
 - Value: Your project ID (from Step 2)
 - Click **Add secret**
 
 **Secret 5: VEXXHOST_PROJECT_NAME**
+
 - Name: `VEXXHOST_PROJECT_NAME`
 - Value: Your project name (from Step 2)
 - Click **Add secret**
 
 **Secret 6: VEXXHOST_USERNAME**
+
 - Name: `VEXXHOST_USERNAME`
 - Value: Your VexxHost username/email
 - Click **Add secret**
 
 **Secret 7: VEXXHOST_PASSWORD**
+
 - Name: `VEXXHOST_PASSWORD`
 - Value: Your VexxHost password
 - Click **Add secret**
 
 **Secret 8: VEXXHOST_REGION**
+
 - Name: `VEXXHOST_REGION`
 - Value: `ca-ymq-1` (or your region)
 - Click **Add secret**
@@ -274,6 +285,7 @@ git push -u origin main
 Go to **Settings → Secrets and variables → Actions**
 
 You should see all 8 secrets listed:
+
 - ✅ TAILSCALE_AUTH_KEY
 - ✅ TAILSCALE_OAUTH_KEY
 - ✅ VEXXHOST_AUTH_URL
@@ -302,6 +314,7 @@ You should see all 8 secrets listed:
 3. A dialog appears with workflow inputs:
 
 **Configure Test Run:**
+
 ```
 Branch: main
 packer_template: builder.pkr.hcl
@@ -318,10 +331,12 @@ debug_mode: false
 The workflow will start running. You should see:
 
 **Initial Status:**
+
 - Yellow dot = Running
 - Progress through stages visible
 
 **Expected Timeline:**
+
 ```
 00:00 - Workflow started
 00:30 - Prepare job complete
@@ -364,6 +379,7 @@ The workflow will start running. You should see:
 3. Both should show as "Connected"
 
 **After Workflow Completes:**
+
 - Devices should auto-disconnect (if ephemeral keys used)
 - They may disappear from the list
 
@@ -377,6 +393,7 @@ The workflow will start running. You should see:
 4. Status should be: `Active` or `Build`
 
 **After Workflow Completes:**
+
 - Instance should be deleted automatically
 - List should be empty (or not show the bastion)
 
@@ -386,11 +403,13 @@ The workflow will start running. You should see:
 2. Workflow should show: ✅ (green checkmark) or ❌ (red X)
 
 **For Successful Run:**
+
 - All steps show green checkmarks
 - Total time: ~5-10 minutes
 - Artifacts available for download
 
 **Download Artifacts:**
+
 1. Scroll to bottom of workflow run page
 2. Under "Artifacts" section
 3. Download `packer-logs-<run-id>` (if available)
@@ -400,18 +419,21 @@ The workflow will start running. You should see:
 Click through each step to verify:
 
 **Step: Setup Tailscale VPN**
+
 ```
 ✅ Tailscale status:
    Connected to Tailscale network
 ```
 
 **Step: Launch bastion instance on VexxHost**
+
 ```
 ✅ Bastion instance created
    ID: abc-123-def
 ```
 
 **Step: Wait for bastion to join Tailscale network**
+
 ```
 ⏳ Waiting for bastion to join Tailscale network...
 ✅ Bastion joined Tailscale at IP: 100.64.x.x
@@ -419,17 +441,20 @@ Click through each step to verify:
 ```
 
 **Step: Initialize Packer templates**
+
 ```
 ✅ Initializing templates...
    Installed plugin...
 ```
 
 **Step: Validate Packer templates**
+
 ```
 ✅ ubuntu-2204-builder-... validated with ubuntu-22.04
 ```
 
 **Step: Cleanup bastion instance**
+
 ```
 ✅ Bastion instance deleted
 ✅ Bastion instance cleanup verified
@@ -438,21 +463,25 @@ Click through each step to verify:
 ### 6.5 Common First-Run Issues
 
 **Issue 1: Tailscale Connection Timeout**
+
 - **Symptom:** "Timeout waiting for bastion to join Tailscale"
 - **Solution:** Check auth key settings (ephemeral, reusable, pre-approved)
 - **Fix:** Regenerate auth key with correct settings
 
 **Issue 2: OpenStack Authentication Failed**
+
 - **Symptom:** "Authentication failed" or "Invalid credentials"
 - **Solution:** Verify all VexxHost secrets are correct
 - **Fix:** Double-check project ID, username, password in secrets
 
 **Issue 3: Image Not Found**
+
 - **Symptom:** "Image 'Ubuntu 22.04' not found"
 - **Solution:** Check exact image name in VexxHost
 - **Fix:** Run `openstack image list | grep -i ubuntu` and use exact name
 
 **Issue 4: Insufficient Quota**
+
 - **Symptom:** "Quota exceeded for instances"
 - **Solution:** Delete unused instances or request quota increase
 - **Fix:** Contact VexxHost support for quota increase
@@ -482,6 +511,7 @@ After a successful test run, verify:
 If you want to test an actual image build (not just validation):
 
 **Option 1: Use Example Templates**
+
 ```bash
 # Copy examples to packer directory
 mkdir -p packer
@@ -559,6 +589,7 @@ For any issues, rerun with debug enabled:
 3. Click **Run workflow**
 
 This enables:
+
 - `PACKER_LOG=1` (verbose Packer output)
 - Extended logging
 - Additional diagnostic information
@@ -566,12 +597,14 @@ This enables:
 ### View Detailed Logs
 
 **Bastion Console Log:**
+
 ```bash
 # In workflow, check step output for:
 openstack console log show bastion-gh-12345 --lines 100
 ```
 
 **Bastion Init Log:**
+
 ```bash
 # If SSH accessible:
 ssh root@<bastion-tailscale-ip> cat /var/log/bastion-init.log
@@ -615,9 +648,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packer/**'
+      - "packer/**"
   schedule:
-    - cron: '0 2 * * 1'  # Weekly Monday 2 AM
+    - cron: "0 2 * * 1" # Weekly Monday 2 AM
 ```
 
 ### 2. Add Notifications
@@ -652,6 +685,7 @@ strategy:
 ### 5. Add More Templates
 
 Create templates for different purposes:
+
 - Development images
 - Production images
 - CI/CD images
@@ -714,13 +748,13 @@ openstack server delete bastion-gh-12345
 
 Your setup is successful when:
 
-✅ Workflow completes without errors  
-✅ Bastion appears and disappears in Tailscale  
-✅ Bastion creates and deletes in VexxHost  
-✅ Packer templates validate successfully  
-✅ No manual cleanup needed  
-✅ Total time < 10 minutes (for validation)  
-✅ Costs within expected range (~$0.02/build)  
+✅ Workflow completes without errors
+✅ Bastion appears and disappears in Tailscale
+✅ Bastion creates and deletes in VexxHost
+✅ Packer templates validate successfully
+✅ No manual cleanup needed
+✅ Total time < 10 minutes (for validation)
+✅ Costs within expected range (~$0.02/build)
 
 ---
 

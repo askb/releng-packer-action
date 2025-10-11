@@ -27,26 +27,26 @@ jobs:
   build-image:
     runs-on: ubuntu-latest
     name: Build ${{ inputs.packer_vars }} Image
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           submodules: true
 
       - name: Build Image with Packer
         id: build
-        uses: lfit/packer-vexxhost-bastion-action@main  # Use @v1 for stable version
+        uses: lfit/packer-vexxhost-bastion-action@main # Use @v1 for stable version
         with:
           # Packer configuration
           packer_template: "templates/builder.pkr.hcl"
           packer_vars_file: "vars/${{ inputs.packer_vars }}.pkrvars.hcl"
           packer_working_dir: "packer"
           packer_version: "1.11.2"
-          
+
           # Cloud configuration
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
-          
+
           # VexxHost credentials
           vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
           vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
@@ -54,16 +54,16 @@ jobs:
           vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
           vexxhost_region: ${{ secrets.VEXXHOST_REGION || 'ca-ymq-1' }}
           vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          
-          # Bastion configuration  
+
+          # Bastion configuration
           bastion_flavor: "v3-standard-2"
           bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
           bastion_network: "odlci"
           bastion_wait_timeout: "300"
-          
+
           # Tailscale
           tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-          
+
           # Build options
           debug_mode: ${{ inputs.debug_mode }}
           upload_logs: "true"

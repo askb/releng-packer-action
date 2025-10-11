@@ -33,17 +33,17 @@ jobs:
           packer_template: "templates/builder.pkr.hcl"
           packer_vars_file: "vars/ubuntu-22.04.pkrvars.hcl"
           packer_working_dir: "packer"
-          
+
           # Cloud configuration (base64 encoded)
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
-          
+
           # VexxHost credentials
           vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
           vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
           vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
           vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
           vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          
+
           # Tailscale
           tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
 ```
@@ -59,11 +59,11 @@ jobs:
     packer_vars_file: "vars/ubuntu-22.04.pkrvars.hcl"
     packer_working_dir: "."
     packer_version: "1.11.2"
-    
+
     # Cloud configuration
     cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
-    clouds_yaml: ${{ secrets.CLOUDS_YAML_B64 }}  # Optional
-    
+    clouds_yaml: ${{ secrets.CLOUDS_YAML_B64 }} # Optional
+
     # VexxHost credentials
     vexxhost_auth_url: "https://auth.vexxhost.net/v3/"
     vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
@@ -71,16 +71,16 @@ jobs:
     vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
     vexxhost_region: "ca-ymq-1"
     vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
-    
+
     # Bastion configuration
     bastion_flavor: "v3-standard-4"
     bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
     bastion_network: "odlci"
     bastion_wait_timeout: "600"
-    
+
     # Tailscale
     tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-    
+
     # Build options
     debug_mode: "true"
     upload_logs: "true"
@@ -91,43 +91,43 @@ jobs:
 
 ### Required Inputs
 
-| Input | Description |
-|-------|-------------|
-| `packer_template` | Path to Packer template file (e.g., `templates/builder.pkr.hcl`) |
-| `packer_vars_file` | Path to Packer variables file (e.g., `vars/ubuntu-22.04.pkrvars.hcl`) |
-| `cloud_env_json` | Cloud environment JSON configuration (base64 encoded) |
-| `vexxhost_auth_url` | VexxHost/OpenStack authentication URL |
-| `vexxhost_project_id` | VexxHost/OpenStack project/tenant ID |
-| `vexxhost_username` | VexxHost/OpenStack username |
-| `vexxhost_password` | VexxHost/OpenStack password (base64 encoded recommended) |
-| `vexxhost_network_id` | VexxHost/OpenStack network UUID for Packer builds |
-| `tailscale_auth_key` | Tailscale authentication key |
+| Input                 | Description                                                           |
+| --------------------- | --------------------------------------------------------------------- |
+| `packer_template`     | Path to Packer template file (e.g., `templates/builder.pkr.hcl`)      |
+| `packer_vars_file`    | Path to Packer variables file (e.g., `vars/ubuntu-22.04.pkrvars.hcl`) |
+| `cloud_env_json`      | Cloud environment JSON configuration (base64 encoded)                 |
+| `vexxhost_auth_url`   | VexxHost/OpenStack authentication URL                                 |
+| `vexxhost_project_id` | VexxHost/OpenStack project/tenant ID                                  |
+| `vexxhost_username`   | VexxHost/OpenStack username                                           |
+| `vexxhost_password`   | VexxHost/OpenStack password (base64 encoded recommended)              |
+| `vexxhost_network_id` | VexxHost/OpenStack network UUID for Packer builds                     |
+| `tailscale_auth_key`  | Tailscale authentication key                                          |
 
 ### Optional Inputs
 
-| Input | Description | Default |
-|-------|-------------|---------|
-| `packer_working_dir` | Working directory containing Packer files | `.` |
-| `packer_version` | Packer version to use | `1.11.2` |
-| `clouds_yaml` | OpenStack clouds.yaml configuration (base64 encoded) | `""` |
-| `vexxhost_region` | VexxHost/OpenStack region | `ca-ymq-1` |
-| `bastion_flavor` | OpenStack flavor for bastion instance | `v3-standard-2` |
-| `bastion_image` | Base image for bastion host | `Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]` |
-| `bastion_network` | Network name for bastion host | `odlci` |
-| `bastion_ssh_key` | SSH key name for bastion | `""` |
-| `bastion_wait_timeout` | Timeout in seconds to wait for bastion | `300` |
-| `tailscale_version` | Tailscale version | `latest` |
-| `debug_mode` | Enable debug logging | `false` |
-| `upload_logs` | Upload build logs as artifacts | `true` |
-| `log_retention_days` | Days to retain log artifacts | `30` |
+| Input                  | Description                                          | Default                                    |
+| ---------------------- | ---------------------------------------------------- | ------------------------------------------ |
+| `packer_working_dir`   | Working directory containing Packer files            | `.`                                        |
+| `packer_version`       | Packer version to use                                | `1.11.2`                                   |
+| `clouds_yaml`          | OpenStack clouds.yaml configuration (base64 encoded) | `""`                                       |
+| `vexxhost_region`      | VexxHost/OpenStack region                            | `ca-ymq-1`                                 |
+| `bastion_flavor`       | OpenStack flavor for bastion instance                | `v3-standard-2`                            |
+| `bastion_image`        | Base image for bastion host                          | `Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]` |
+| `bastion_network`      | Network name for bastion host                        | `odlci`                                    |
+| `bastion_ssh_key`      | SSH key name for bastion                             | `""`                                       |
+| `bastion_wait_timeout` | Timeout in seconds to wait for bastion               | `300`                                      |
+| `tailscale_version`    | Tailscale version                                    | `latest`                                   |
+| `debug_mode`           | Enable debug logging                                 | `false`                                    |
+| `upload_logs`          | Upload build logs as artifacts                       | `true`                                     |
+| `log_retention_days`   | Days to retain log artifacts                         | `30`                                       |
 
 ## Outputs
 
-| Output | Description |
-|--------|-------------|
-| `bastion_ip` | Tailscale IP address of the bastion host |
+| Output         | Description                                         |
+| -------------- | --------------------------------------------------- |
+| `bastion_ip`   | Tailscale IP address of the bastion host            |
 | `build_status` | Status of the Packer build (`success` or `failure`) |
-| `image_name` | Name of the built image |
+| `image_name`   | Name of the built image                             |
 
 ## Cloud Environment JSON Format
 
@@ -203,6 +203,7 @@ Configure these secrets in your repository:
 ### 3. Packer Template Requirements
 
 Your Packer template must:
+
 - Use `ssh_bastion_agent_auth = true` for bastion connection
 - Accept `bastion_host` and `bastion_user` variables
 - Use variables from `cloud_env_json` for cloud credentials

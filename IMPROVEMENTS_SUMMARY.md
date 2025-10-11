@@ -7,11 +7,13 @@
 **All GitHub Actions now use commit SHAs instead of version tags for security.**
 
 #### Action.yaml
+
 - `tailscale/github-action@v2` → `@9b0941a5b0464aaf849d388c0fb004e3e15d9b92  # v2.0.3`
 - `actions/setup-python@v5` → `@0b93645e9fea7318ecaed2b359559ac225c90a20  # v5.3.0`
 - `hashicorp/setup-packer@main` → `@35a288e72c00399c0ae4c0c15b0e435e7896e903  # main (pinned)`
 
 #### Example Workflows
+
 - `actions/checkout@v4` → `@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0`
 - `dorny/paths-filter@v3` → `@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3.0.2`
 - `im-open/workflow-conclusion@v2.2.3` → `@e4f7c4980600fbe0818173e30931d3550801b992`
@@ -19,6 +21,7 @@
 - `lfit/checkout-gerrit-change-action@v0.9` → `@54d751e8bd167bc91f7d665dabe33fae87aaaa63`
 
 **Benefits:**
+
 - Immutable references prevent supply chain attacks
 - Exact version tracking
 - Dependabot can still update via commit SHA
@@ -44,6 +47,7 @@ updates:
 ```
 
 **Features:**
+
 - Weekly automatic updates for GitHub Actions
 - Standardized commit messages
 - Automatic labeling for easy PR identification
@@ -55,6 +59,7 @@ updates:
 **Decision:** Not implemented for this action.
 
 **Rationale:**
+
 - path_prefix in gerrit-change-info is for organizing output files
 - This action doesn't create files in the workspace
 - All operations use `working-directory` parameter instead
@@ -72,15 +77,17 @@ updates:
 **File:** `.pre-commit-config.yaml`
 
 **Hooks:**
+
 - ✅ SHA-pinned hook versions (following gerrit-change-info pattern)
 - ✅ `pre-commit-hooks` - trailing whitespace, EOF fixer, YAML checker
-- ✅ `gitlint` - Conventional commits enforcement  
+- ✅ `gitlint` - Conventional commits enforcement
 - ✅ `yamllint` - YAML linting
 - ✅ `shellcheck-py` - Shell script validation
 - ✅ `check-jsonschema` - GitHub Actions workflow validation
 - ✅ `prettier` - Markdown and JSON formatting
 
 **Usage:**
+
 ```bash
 pre-commit install
 pre-commit run --all-files
@@ -89,6 +96,7 @@ pre-commit run --all-files
 #### Actionlint
 
 Integrated in `.github/workflows/test.yaml`:
+
 ```yaml
 actionlint:
   runs-on: ubuntu-latest
@@ -101,6 +109,7 @@ actionlint:
 ```
 
 **Also added:**
+
 - `.yamllint` - Yamllint configuration (renamed from .yamllint.conf)
 - `.gitlint` - Gitlint configuration for conventional commits
 
@@ -113,10 +122,12 @@ actionlint:
 #### Test Files Created
 
 **tests/conftest.py**
+
 - Pytest fixtures for environment and secrets
 - Reusable test helpers
 
 **tests/test_action_yaml.py**
+
 - Tests action.yaml exists and is valid
 - Tests mode input parameter
 - Tests required inputs are defined
@@ -126,6 +137,7 @@ actionlint:
 - Tests conditional steps for modes
 
 **tests/test_workflows.py**
+
 - Parametrized tests for all workflow files
 - Tests workflow YAML validity
 - Tests gerrit-verify workflow structure
@@ -136,6 +148,7 @@ actionlint:
 #### Test Configuration
 
 **pyproject.toml**
+
 ```toml
 [project.optional-dependencies]
 test = [
@@ -160,6 +173,7 @@ exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
 #### Test Workflow
 
 **.github/workflows/test.yaml**
+
 - Runs on push/PR/manual trigger
 - Matrix testing: Python 3.8, 3.9, 3.10, 3.11
 - Coverage reporting (Codecov integration)
@@ -167,6 +181,7 @@ exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
 - Pre-commit validation
 
 **Running Tests:**
+
 ```bash
 # Install
 pip install -e ".[test]"
@@ -186,13 +201,15 @@ pytest --cov --cov-report=html
 
 **Target:** 80%+ code coverage
 
-**Current Status:** 
+**Current Status:**
+
 - Tests for YAML structure: ✅
 - Tests for configuration: ✅
 - Tests for SHA pins: ✅
 - Tests for workflows: ✅
 
 **Coverage Reports:**
+
 - Terminal output during test run
 - HTML report in `htmlcov/` directory
 - XML report for CI/CD (coverage.xml)
@@ -202,13 +219,13 @@ pytest --cov --cov-report=html
 
 ## 🎯 All Requirements Met
 
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| 1. SHA-pinned actions | ✅ | All actions use commit SHAs |
-| 2. Dependabot | ✅ | Weekly updates configured |
-| 3. path_prefix | ⚠️ | Not needed (see rationale) |
-| 4. Pre-commit + actionlint | ✅ | Full integration |
-| 5. Comprehensive tests | ✅ | pytest + coverage |
+| Requirement                | Status | Notes                       |
+| -------------------------- | ------ | --------------------------- |
+| 1. SHA-pinned actions      | ✅     | All actions use commit SHAs |
+| 2. Dependabot              | ✅     | Weekly updates configured   |
+| 3. path_prefix             | ⚠️     | Not needed (see rationale)  |
+| 4. Pre-commit + actionlint | ✅     | Full integration            |
+| 5. Comprehensive tests     | ✅     | pytest + coverage           |
 
 ---
 
@@ -235,21 +252,25 @@ tests/
 ## 🚀 Next Steps
 
 1. **Enable pre-commit.ci** (optional)
+
    - Visit https://pre-commit.ci
    - Enable for this repository
    - Automatic pre-commit runs on PRs
 
 2. **Enable Codecov** (optional)
+
    - Add `CODECOV_TOKEN` secret
    - Coverage reports on PRs
 
 3. **Run tests locally:**
+
    ```bash
    pip install -e ".[test]"
    pytest --cov
    ```
 
 4. **Verify pre-commit:**
+
    ```bash
    pre-commit install
    pre-commit run --all-files
@@ -265,6 +286,7 @@ tests/
 ## 📚 Documentation
 
 All improvements documented in:
+
 - **This file** - Implementation summary
 - **tests/README.md** - Test suite documentation
 - **ACTION_README.md** - Updated with new features
@@ -275,17 +297,20 @@ All improvements documented in:
 ## ✨ Benefits
 
 ### Security
+
 - SHA-pinned actions prevent supply chain attacks
 - Dependabot keeps dependencies updated
 - Shellcheck validates shell scripts
 
 ### Quality
+
 - Automated testing on all Python versions
 - Code coverage tracking
 - Pre-commit hooks catch issues early
 - Actionlint validates workflows
 
 ### Maintainability
+
 - Clear test structure
 - Comprehensive documentation
 - Automated dependency updates

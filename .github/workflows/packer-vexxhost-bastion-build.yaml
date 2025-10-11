@@ -109,7 +109,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     if: |
-      needs.prepare.outputs.has-changes == 'true' || 
+      needs.prepare.outputs.has-changes == 'true' ||
       github.event_name == 'workflow_dispatch'
 
     steps:
@@ -193,7 +193,7 @@ jobs:
           # Use enhanced cloud-init template with variable substitution
           export BASTION_HOSTNAME="${{ env.BASTION_NAME }}"
           export TAILSCALE_AUTH_KEY="${{ secrets.TAILSCALE_AUTH_KEY }}"
-          
+
           # Create cloud-init from template or inline
           if [ -f "templates/bastion-cloud-init.yaml" ]; then
             echo "Using cloud-init template from repository..."
@@ -205,10 +205,10 @@ jobs:
           # VexxHost Tailscale Bastion Host Cloud-Init
           hostname: ${BASTION_HOSTNAME}
           manage_etc_hosts: true
-          
+
           package_update: true
           package_upgrade: true
-          
+
           packages:
             - curl
             - wget
@@ -218,7 +218,7 @@ jobs:
             - ca-certificates
             - python3
             - python3-pip
-          
+
           write_files:
             - path: /etc/sysctl.d/99-tailscale.conf
               content: |
@@ -226,25 +226,25 @@ jobs:
                 net.ipv6.conf.all.forwarding = 1
                 net.netfilter.nf_conntrack_max = 131072
               permissions: '0644'
-            
+
             - path: /usr/local/bin/bastion-init.sh
               content: |
                 #!/bin/bash
                 set -e
                 echo "[$(date)] Bastion initialization started" | tee -a /var/log/bastion-init.log
-                
+
                 # Wait for network
                 until ping -c 1 8.8.8.8 &>/dev/null; do
                   echo "Waiting for network..." | tee -a /var/log/bastion-init.log
                   sleep 2
                 done
-                
+
                 echo "[$(date)] Network ready" | tee -a /var/log/bastion-init.log
-                
+
                 # Install Tailscale
                 echo "[$(date)] Installing Tailscale..." | tee -a /var/log/bastion-init.log
                 curl -fsSL https://tailscale.com/install.sh | sh
-                
+
                 # Start Tailscale
                 echo "[$(date)] Starting Tailscale..." | tee -a /var/log/bastion-init.log
                 tailscale up \
@@ -254,15 +254,15 @@ jobs:
                   --ssh \
                   --accept-routes \
                   --accept-dns=false
-                
+
                 TAILSCALE_IP=$(tailscale ip -4)
                 echo "[$(date)] Tailscale connected: ${TAILSCALE_IP}" | tee -a /var/log/bastion-init.log
-                
+
                 # Create ready marker
                 echo "READY" > /tmp/bastion-ready
                 echo "[$(date)] Bastion ready" | tee -a /var/log/bastion-init.log
               permissions: '0755'
-            
+
             - path: /etc/motd
               content: |
                 ╔═══════════════════════════════════════════╗
@@ -271,31 +271,31 @@ jobs:
                 ╚═══════════════════════════════════════════╝
                 Logs: /var/log/bastion-init.log
               permissions: '0644'
-          
+
           timezone: UTC
-          
+
           users:
             - name: ubuntu
               sudo: ALL=(ALL) NOPASSWD:ALL
               shell: /bin/bash
               groups: sudo
               lock_passwd: true
-          
+
           ssh_pwauth: false
           disable_root: false
-          
+
           runcmd:
             - sysctl -p /etc/sysctl.d/99-tailscale.conf
             - /usr/local/bin/bastion-init.sh
-          
+
           final_message: "Bastion initialization complete after $UPTIME seconds"
           EOFCI
-            
+
             # Substitute environment variables
             sed -i "s/\${BASTION_HOSTNAME}/$BASTION_HOSTNAME/g" cloud-init.yaml
             sed -i "s/\${TAILSCALE_AUTH_KEY}/$TAILSCALE_AUTH_KEY/g" cloud-init.yaml
           fi
-          
+
           echo "Cloud-init script created:"
           cat cloud-init.yaml
 
@@ -303,13 +303,13 @@ jobs:
         id: launch-bastion
         run: |
           echo "🚀 Launching bastion instance..."
-          
+
           # Build openstack command with optional SSH key
           CMD="openstack server create"
           CMD="$CMD --flavor '${{ env.OPENSTACK_FLAVOR }}'"
           CMD="$CMD --image '${{ env.OPENSTACK_IMAGE }}'"
           CMD="$CMD --nic net-id=${{ env.OPENSTACK_NETWORK }}"
-          
+
           # Add SSH key if specified
           if [ -n "${{ env.OPENSTACK_SSH_KEY }}" ]; then
             CMD="$CMD --key-name ${{ env.OPENSTACK_SSH_KEY }}"
@@ -317,16 +317,16 @@ jobs:
           else
             echo "📝 No SSH key specified - using Tailscale SSH only"
           fi
-          
+
           CMD="$CMD --user-data cloud-init.yaml"
           CMD="$CMD --wait"
           CMD="$CMD '${{ env.BASTION_NAME }}'"
-          
+
           echo "Running: $CMD"
           eval $CMD
-          
+
           echo "✅ Bastion instance created"
-          
+
           # Get instance details
           openstack server show "${{ env.BASTION_NAME }}" -f yaml
 
@@ -335,47 +335,47 @@ jobs:
         timeout-minutes: 10
         run: |
           echo "⏳ Waiting for bastion to join Tailscale network..."
-          
+
           TIMEOUT=${{ env.BASTION_WAIT_TIMEOUT }}
           ELAPSED=0
           INTERVAL=10
-          
+
           while [ $ELAPSED -lt $TIMEOUT ]; do
             if sudo tailscale status | grep -q "${{ env.BASTION_NAME }}"; then
               BASTION_IP=$(sudo tailscale status | grep "${{ env.BASTION_NAME }}" | awk '{print $1}')
               echo "BASTION_IP=${BASTION_IP}" >> $GITHUB_ENV
               echo "✅ Bastion joined Tailscale at IP: ${BASTION_IP}"
-              
+
               # Wait for bastion initialization to complete
               echo "Waiting for bastion initialization..."
               for i in {1..24}; do
                 if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
                    root@${BASTION_IP} "test -f /tmp/bastion-ready" 2>/dev/null; then
                   echo "✅ Bastion initialization complete (ready marker found)"
-                  
+
                   # Display bastion status
                   echo "Bastion status:"
                   ssh -o StrictHostKeyChecking=no root@${BASTION_IP} \
                     "cat /var/log/bastion-init.log | tail -20" || true
-                  
+
                   exit 0
                 fi
                 echo "Waiting for bastion ready marker... (attempt $i/24)"
                 sleep 5
               done
-              
+
               echo "⚠️ Bastion reachable but ready marker not found, proceeding anyway..."
               echo "Checking bastion logs:"
               ssh -o StrictHostKeyChecking=no root@${BASTION_IP} \
                 "cat /var/log/bastion-init.log 2>/dev/null || echo 'Log not available'" || true
               exit 0
             fi
-            
+
             echo "Waiting for bastion... ($ELAPSED/$TIMEOUT seconds)"
             sleep $INTERVAL
             ELAPSED=$((ELAPSED + INTERVAL))
           done
-          
+
           echo "❌ Timeout waiting for bastion to join Tailscale"
           echo "Checking Tailscale status:"
           sudo tailscale status
@@ -408,10 +408,10 @@ jobs:
           else
             CLOUD_PASS="$VEXXHOST_PASSWORD"
           fi
-          
+
           # Use network ID from secret, or default if not set
           NETWORK_ID="${VEXXHOST_NETWORK_ID:-b5fcd86e-efac-4997-b8bc-dbe0d35bc229}"
-          
+
           # Create cloud-env.json for Packer
           cat > "${GITHUB_WORKSPACE}/cloud-env.json" <<EOF
           {
@@ -423,7 +423,7 @@ jobs:
             "ssh_proxy_host": "${{ env.BASTION_IP }}"
           }
           EOF
-          
+
           echo "✅ Cloud environment JSON created at ${GITHUB_WORKSPACE}/cloud-env.json"
           echo "   SSH Proxy Host: ${{ env.BASTION_IP }}"
           echo "   Network ID: ${NETWORK_ID}"
@@ -458,12 +458,12 @@ jobs:
         working-directory: ${{ needs.prepare.outputs.packer-path }}
         run: |
           echo "Initializing Packer templates..."
-          
+
           for template in templates/*.pkr.hcl; do
             if [[ "$template" == *"variables"* ]]; then
               continue
             fi
-            
+
             echo "Initializing $template..."
             packer init "$template" || echo "⚠️ Init failed for $template"
           done
@@ -480,49 +480,49 @@ jobs:
         working-directory: ${{ needs.prepare.outputs.packer-path }}
         run: |
           set -x
-          
+
           varfiles=(vars/*.pkrvars.hcl)
           templates=(templates/*.pkr.hcl)
-          
+
           mkdir -p "${GITHUB_WORKSPACE}/logs"
-          
+
           for varfile in "${varfiles[@]}"; do
             # Skip cloud-env and example files
             if [[ "$varfile" == *"cloud-env"* ]] || \
                [[ "$varfile" == "vars/*.pkrvars.hcl" ]]; then
               continue
             fi
-            
+
             # Filter by user input if provided
             if [[ -n "${{ inputs.packer_vars }}" ]] && \
                [[ "$varfile" != *"${{ inputs.packer_vars }}"* ]]; then
               echo "Skipping $varfile (doesn't match filter)"
               continue
             fi
-            
+
             echo "::group::Validating $varfile"
             for template in "${templates[@]}"; do
               if [[ "$template" == *"variables"* ]]; then
                 continue
               fi
-              
+
               # Filter by user input if provided
               if [[ -n "${{ inputs.packer_template }}" ]] && \
                  [[ "$template" != *"${{ inputs.packer_template }}" ]]; then
                 echo "Skipping $template (doesn't match filter)"
                 continue
               fi
-              
+
               export PACKER_LOG=1
               export PACKER_LOG_PATH="${GITHUB_WORKSPACE}/logs/validate-${varfile##*/}-${template##*/}.log"
-              
+
               # Build packer validate command with cloud-env.json
               PACKER_CMD="packer validate -var-file=${GITHUB_WORKSPACE}/cloud-env.json"
               if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
                 PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
               fi
               PACKER_CMD="$PACKER_CMD -var-file=$varfile -var=bastion_host=${{ env.BASTION_IP }} $template"
-              
+
               if $PACKER_CMD; then
                 echo "✅ $template validated with $varfile"
               else
@@ -539,58 +539,58 @@ jobs:
           PACKER_LOG: ${{ inputs.debug_mode && '1' || '0' }}
         run: |
           set -x
-          
+
           varfiles=(vars/*.pkrvars.hcl)
           templates=(templates/*.pkr.hcl)
-          
+
           mkdir -p "${GITHUB_WORKSPACE}/build-logs"
-          
+
           build_count=0
           max_builds=5  # Limit concurrent builds
-          
+
           for varfile in "${varfiles[@]}"; do
             # Skip cloud-env and example files
             if [[ "$varfile" == *"cloud-env"* ]] || \
                [[ "$varfile" == "vars/*.pkrvars.hcl" ]]; then
               continue
             fi
-            
+
             # Filter by user input if provided
             if [[ -n "${{ inputs.packer_vars }}" ]] && \
                [[ "$varfile" != *"${{ inputs.packer_vars }}"* ]]; then
               echo "Skipping $varfile (doesn't match filter)"
               continue
             fi
-            
+
             if [ $build_count -ge $max_builds ]; then
               echo "⚠️ Reached maximum builds limit ($max_builds)"
               break
             fi
-            
+
             echo "::group::Building with $varfile"
             for template in "${templates[@]}"; do
               if [[ "$template" == *"variables"* ]]; then
                 continue
               fi
-              
+
               # Filter by user input if provided
               if [[ -n "${{ inputs.packer_template }}" ]] && \
                  [[ "$template" != *"${{ inputs.packer_template }}" ]]; then
                 echo "Skipping $template (doesn't match filter)"
                 continue
               fi
-              
+
               export PACKER_LOG_PATH="${GITHUB_WORKSPACE}/build-logs/build-${varfile##*/}-${template##*/}.log"
-              
+
               echo "🔨 Building $template with $varfile via bastion ${{ env.BASTION_IP }}..."
-              
+
               # Build packer build command with cloud-env.json
               PACKER_CMD="packer build -var-file=${GITHUB_WORKSPACE}/cloud-env.json"
               if [ -f "${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl" ]; then
                 PACKER_CMD="$PACKER_CMD -var-file=${GITHUB_WORKSPACE}/cloud-env.pkrvars.hcl"
               fi
               PACKER_CMD="$PACKER_CMD -var-file=$varfile -var=bastion_host=${{ env.BASTION_IP }} -var=bastion_user=root $template"
-              
+
               if $PACKER_CMD; then
                 echo "✅ Successfully built $template with $varfile"
                 build_count=$((build_count + 1))
@@ -599,13 +599,13 @@ jobs:
                 echo "::warning::Build failed for $template with $varfile"
                 # Continue with other builds
               fi
-              
+
               # Only build one template per varfile to limit resource usage
               break
             done
             echo "::endgroup::"
           done
-          
+
           echo "📊 Completed $build_count builds"
 
       # ========================================
@@ -626,12 +626,12 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p bastion-logs
-          
+
           # Try to fetch cloud-init logs from bastion
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             root@${{ env.BASTION_IP }} \
             "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log || true
-          
+
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             root@${{ env.BASTION_IP }} \
             "cloud-init status --long" > bastion-logs/cloud-init-status.log || true
@@ -652,12 +652,12 @@ jobs:
         if: always()
         run: |
           echo "🧹 Cleaning up bastion instance..."
-          
+
           # Remove from Tailscale (optional, ephemeral keys auto-cleanup)
           if [ -n "${{ env.BASTION_IP }}" ]; then
             sudo tailscale logout || true
           fi
-          
+
           # Delete OpenStack instance
           if openstack server show "${{ env.BASTION_NAME }}" &>/dev/null; then
             echo "Deleting bastion instance..."
@@ -674,14 +674,14 @@ jobs:
         if: always()
         run: |
           echo "Verifying cleanup..."
-          
+
           if openstack server show "${{ env.BASTION_NAME }}" &>/dev/null; then
             echo "⚠️ Warning: Bastion instance still exists!"
             openstack server show "${{ env.BASTION_NAME }}"
           else
             echo "✅ Bastion instance cleanup verified"
           fi
-          
+
           echo "Final Tailscale status:"
           sudo tailscale status || true
 
@@ -703,7 +703,7 @@ jobs:
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Bastion:** ${{ env.BASTION_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ needs.packer-build-vexxhost.result }}" == "success" ]; then
             echo "✅ **Build Status:** Success" >> $GITHUB_STEP_SUMMARY
           else

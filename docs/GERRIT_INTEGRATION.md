@@ -7,6 +7,7 @@ This guide explains how to integrate the Packer VexxHost Bastion Action with Ger
 The action supports two modes designed for Gerrit-based development workflows:
 
 1. **Validate Mode** - Triggered on Gerrit verify (patchset-created events)
+
    - Validates Packer syntax and configuration
    - Runs quickly without creating infrastructure
    - Used in pre-merge validation
@@ -47,28 +48,28 @@ releng/builder/  (or similar)
 
 Configure these in your GitHub repository settings (Settings → Secrets and variables → Actions → Variables):
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `GERRIT_SERVER` | Gerrit server hostname | `gerrit.example.com` |
-| `GERRIT_SSH_USER` | SSH username for Gerrit | `jenkins` |
-| `GERRIT_URL` | Gerrit base URL | `https://gerrit.example.com/` |
-| `GERRIT_KNOWN_HOSTS` | SSH known_hosts entry | `gerrit.example.com ssh-rsa AAAA...` |
+| Variable             | Description             | Example                              |
+| -------------------- | ----------------------- | ------------------------------------ |
+| `GERRIT_SERVER`      | Gerrit server hostname  | `gerrit.example.com`                 |
+| `GERRIT_SSH_USER`    | SSH username for Gerrit | `jenkins`                            |
+| `GERRIT_URL`         | Gerrit base URL         | `https://gerrit.example.com/`        |
+| `GERRIT_KNOWN_HOSTS` | SSH known_hosts entry   | `gerrit.example.com ssh-rsa AAAA...` |
 
 ### GitHub Repository Secrets
 
 Configure these secrets:
 
-| Secret | Required For | Description |
-|--------|--------------|-------------|
-| `GERRIT_SSH_PRIVKEY` | Validation | SSH private key for Gerrit access |
-| `CLOUD_ENV_JSON_B64` | Build only | Base64-encoded cloud environment JSON |
-| `CLOUDS_YAML_B64` | Build only (optional) | Base64-encoded clouds.yaml |
-| `VEXXHOST_AUTH_URL` | Build only | OpenStack auth URL |
-| `VEXXHOST_PROJECT_ID` | Build only | OpenStack project ID |
-| `VEXXHOST_USERNAME` | Build only | OpenStack username |
-| `VEXXHOST_PASSWORD_B64` | Build only | Base64-encoded password |
-| `VEXXHOST_NETWORK_ID` | Build only | Network UUID |
-| `TAILSCALE_AUTH_KEY` | Build only | Tailscale auth key |
+| Secret                  | Required For          | Description                           |
+| ----------------------- | --------------------- | ------------------------------------- |
+| `GERRIT_SSH_PRIVKEY`    | Validation            | SSH private key for Gerrit access     |
+| `CLOUD_ENV_JSON_B64`    | Build only            | Base64-encoded cloud environment JSON |
+| `CLOUDS_YAML_B64`       | Build only (optional) | Base64-encoded clouds.yaml            |
+| `VEXXHOST_AUTH_URL`     | Build only            | OpenStack auth URL                    |
+| `VEXXHOST_PROJECT_ID`   | Build only            | OpenStack project ID                  |
+| `VEXXHOST_USERNAME`     | Build only            | OpenStack username                    |
+| `VEXXHOST_PASSWORD_B64` | Build only            | Base64-encoded password               |
+| `VEXXHOST_NETWORK_ID`   | Build only            | Network UUID                          |
+| `TAILSCALE_AUTH_KEY`    | Build only            | Tailscale auth key                    |
 
 ## Validation Workflow (Gerrit Verify)
 
@@ -110,11 +111,11 @@ jobs:
           gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
           gerrit-project: ${{ inputs.GERRIT_PROJECT }}
           gerrit-url: ${{ vars.GERRIT_URL }}
-          submodules: "true"  # ← Important!
-      
+          submodules: "true" # ← Important!
+
       - name: Update submodules
         run: git submodule update --init
-      
+
       - name: Check for packer changes
         uses: dorny/paths-filter@v3
         id: changes
@@ -122,7 +123,7 @@ jobs:
           filters: |
             src:
               - 'packer/**'
-      
+
       - name: Validate Packer
         if: steps.changes.outputs.src == 'true'
         uses: lfit/packer-vexxhost-bastion-action@v1
@@ -180,9 +181,9 @@ jobs:
         with:
           ref: ${{ inputs.GERRIT_BRANCH }}
           submodules: true
-      
+
       - run: git submodule update --init
-      
+
       - name: Build Image
         uses: lfit/packer-vexxhost-bastion-action@v1
         with:
@@ -220,17 +221,20 @@ githubActions {
 Configure in Gerrit → Project Settings → Webhooks:
 
 **Webhook URL:**
+
 ```
 https://api.github.com/repos/OWNER/REPO/actions/workflows/gerrit-verify.yaml/dispatches
 ```
 
 **Headers:**
+
 ```
 Authorization: Bearer ${GITHUB_PAT}
 Accept: application/vnd.github.v3+json
 ```
 
 **Payload Template:**
+
 ```json
 {
   "ref": "main",
@@ -291,7 +295,7 @@ jobs:
     steps:
       - id: set-matrix
         run: echo "matrix=${{ inputs.combinations }}" >> $GITHUB_OUTPUT
-  
+
   build:
     needs: generate-matrix
     strategy:
@@ -301,15 +305,15 @@ jobs:
 
 ## Validation vs Build Comparison
 
-| Feature | Validate Mode | Build Mode |
-|---------|--------------|------------|
-| **Bastion Host** | ❌ Not created | ✅ Created |
-| **Tailscale** | ❌ Not needed | ✅ Required |
-| **Cloud Credentials** | ⚠️ Optional | ✅ Required |
-| **Execution Time** | ~30 seconds | ~5-15 minutes |
-| **Cost** | Minimal | Moderate (compute) |
-| **Use Case** | Pre-merge checks | Image publishing |
-| **Triggered By** | Patchset upload | Merge/Schedule |
+| Feature               | Validate Mode    | Build Mode         |
+| --------------------- | ---------------- | ------------------ |
+| **Bastion Host**      | ❌ Not created   | ✅ Created         |
+| **Tailscale**         | ❌ Not needed    | ✅ Required        |
+| **Cloud Credentials** | ⚠️ Optional      | ✅ Required        |
+| **Execution Time**    | ~30 seconds      | ~5-15 minutes      |
+| **Cost**              | Minimal          | Moderate (compute) |
+| **Use Case**          | Pre-merge checks | Image publishing   |
+| **Triggered By**      | Patchset upload  | Merge/Schedule     |
 
 ## Troubleshooting
 
@@ -318,6 +322,7 @@ jobs:
 **Problem:** Can't find template or vars file
 
 **Solution:**
+
 1. Check `packer_working_dir` is correct
 2. Ensure paths are relative to working directory
 3. Verify submodules are checked out:
@@ -333,6 +338,7 @@ jobs:
 **Problem:** Build mode requires Tailscale but key not provided
 
 **Solution:** Add secret to repository:
+
 ```bash
 gh secret set TAILSCALE_AUTH_KEY --body "tskey-auth-..."
 ```
@@ -342,6 +348,7 @@ gh secret set TAILSCALE_AUTH_KEY --body "tskey-auth-..."
 **Problem:** Vote job doesn't run or fails
 
 **Solution:**
+
 1. Check `vote` job has `if: always()`
 2. Verify GERRIT_SSH_PRIVKEY secret is set
 3. Ensure GERRIT_SERVER variable matches
@@ -351,10 +358,11 @@ gh secret set TAILSCALE_AUTH_KEY --body "tskey-auth-..."
 **Problem:** `common-packer/vars/*.pkrvars.hcl` not found
 
 **Solution:**
+
 ```yaml
 - uses: lfit/checkout-gerrit-change-action@v0.9
   with:
-    submodules: "true"  # ← Must be string "true"
+    submodules: "true" # ← Must be string "true"
 - run: git submodule update --init
 ```
 
@@ -371,6 +379,7 @@ gh secret set TAILSCALE_AUTH_KEY --body "tskey-auth-..."
 ## Examples
 
 See `examples/workflows/` directory:
+
 - `gerrit-packer-verify.yaml` - Complete verification workflow
 - `gerrit-packer-merge.yaml` - Complete build workflow
 - `matrix-build-example.yaml` - Multi-combination builds

@@ -106,18 +106,18 @@ case $option in
         else
             git init "$SCRIPT_DIR"
             success "Git repository initialized"
-            
+
             # Create initial commit
             git -C "$SCRIPT_DIR" add .
             git -C "$SCRIPT_DIR" commit -m "Initial commit: VexxHost Packer workflow" || true
             success "Initial commit created"
         fi
         ;;
-    
+
     2)
         echo ""
         info "Setting up packer directory..."
-        
+
         if [ -d "$SCRIPT_DIR/packer" ]; then
             warning "packer directory already exists"
             read -p "Overwrite? (y/N): " overwrite
@@ -126,20 +126,20 @@ case $option in
                 exit 0
             fi
         fi
-        
+
         mkdir -p "$SCRIPT_DIR/packer"
         cp -r "$SCRIPT_DIR/examples/templates" "$SCRIPT_DIR/packer/"
         cp -r "$SCRIPT_DIR/examples/vars" "$SCRIPT_DIR/packer/"
         cp -r "$SCRIPT_DIR/examples/provision" "$SCRIPT_DIR/packer/"
-        
+
         success "Packer directory created with example templates"
         info "Location: $SCRIPT_DIR/packer"
         ;;
-    
+
     3)
         echo ""
         info "Installing pre-commit hooks..."
-        
+
         if ! command -v pre-commit &> /dev/null; then
             warning "pre-commit is not installed"
             info "Installing via pip..."
@@ -149,11 +149,11 @@ case $option in
                 exit 1
             }
         fi
-        
+
         cd "$SCRIPT_DIR"
         pre-commit install
         success "Pre-commit hooks installed"
-        
+
         info "Running pre-commit on all files..."
         if pre-commit run --all-files; then
             success "All pre-commit checks passed"
@@ -162,44 +162,44 @@ case $option in
             info "Files have been auto-formatted. Review changes with: git diff"
         fi
         ;;
-    
+
     4)
         echo ""
         info "Validating workflow files..."
-        
+
         if ! command -v python3 &> /dev/null; then
             error "Python3 is required for validation"
             exit 1
         fi
-        
+
         # Validate workflow YAML
         python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.github/workflows/packer-vexxhost-bastion-build.yaml'))" && \
             success "Workflow YAML is valid" || \
             error "Workflow YAML validation failed"
-        
+
         # Validate pre-commit config
         python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.pre-commit-config.yaml'))" && \
             success "Pre-commit config is valid" || \
             error "Pre-commit config validation failed"
-        
+
         # Validate yamllint config
         python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.yamllint.conf'))" && \
             success "Yamllint config is valid" || \
             error "Yamllint config validation failed"
         ;;
-    
+
     5)
         echo ""
         info "Running template tests..."
-        
+
         if [ ! -f "$SCRIPT_DIR/test-templates.sh" ]; then
             error "test-templates.sh not found"
             exit 1
         fi
-        
+
         bash "$SCRIPT_DIR/test-templates.sh"
         ;;
-    
+
     6)
         echo ""
         echo "========================================="
@@ -231,13 +231,13 @@ case $option in
         echo "  - README.md"
         echo ""
         ;;
-    
+
     7)
         echo ""
         info "Exiting setup"
         exit 0
         ;;
-    
+
     *)
         error "Invalid option"
         exit 1

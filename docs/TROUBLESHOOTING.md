@@ -18,6 +18,7 @@ Common issues and solutions for the VexxHost Tailscale Bastion workflow.
 ### ❌ Authentication Failed
 
 **Symptoms:**
+
 ```
 Error: Authentication failed
 Unable to authenticate to OpenStack
@@ -26,6 +27,7 @@ Unable to authenticate to OpenStack
 **Solutions:**
 
 1. Verify credentials in GitHub secrets:
+
    ```bash
    # Test locally first
    export OS_AUTH_URL="https://auth.vexxhost.net/v3"
@@ -33,11 +35,12 @@ Unable to authenticate to OpenStack
    export OS_USERNAME="your-username"
    export OS_PASSWORD="your-password"
    export OS_REGION_NAME="ca-ymq-1"
-   
+
    openstack server list
    ```
 
 2. Check secret names match exactly:
+
    - `VEXXHOST_AUTH_URL`
    - `VEXXHOST_PROJECT_NAME`
    - `VEXXHOST_USERNAME`
@@ -49,6 +52,7 @@ Unable to authenticate to OpenStack
 ### ❌ Insufficient Quota
 
 **Symptoms:**
+
 ```
 Error: Quota exceeded for instances
 Error: Quota exceeded for cores
@@ -57,12 +61,14 @@ Error: Quota exceeded for cores
 **Solutions:**
 
 1. Check current usage:
+
    ```bash
    openstack quota show
    openstack server list
    ```
 
 2. Delete unused instances:
+
    ```bash
    openstack server list
    openstack server delete <instance-name>
@@ -72,12 +78,13 @@ Error: Quota exceeded for cores
 
 4. Use smaller instance flavor:
    ```yaml
-   bastion_flavor: "v3-starter-1"  # Smaller/cheaper
+   bastion_flavor: "v3-starter-1" # Smaller/cheaper
    ```
 
 ### ❌ Image Not Found
 
 **Symptoms:**
+
 ```
 Error: Image 'Ubuntu 22.04' not found
 ```
@@ -85,13 +92,15 @@ Error: Image 'Ubuntu 22.04' not found
 **Solutions:**
 
 1. List available images:
+
    ```bash
    openstack image list
    ```
 
 2. Update workflow with exact image name:
+
    ```yaml
-   bastion_image: "Ubuntu-22.04-x86_64"  # Exact name from image list
+   bastion_image: "Ubuntu-22.04-x86_64" # Exact name from image list
    ```
 
 3. Common VexxHost image names:
@@ -106,6 +115,7 @@ Error: Image 'Ubuntu 22.04' not found
 ### ❌ Tailscale Connection Timeout
 
 **Symptoms:**
+
 ```
 Error: Timeout waiting for bastion to join Tailscale
 Bastion never appears in tailscale status
@@ -114,6 +124,7 @@ Bastion never appears in tailscale status
 **Solutions:**
 
 1. **Check Auth Key Settings:**
+
    - Go to Tailscale admin → Auth Keys
    - Verify key has these settings:
      - ✅ Reusable
@@ -122,6 +133,7 @@ Bastion never appears in tailscale status
    - Tags: `tag:bastion`
 
 2. **Regenerate Auth Key:**
+
    ```bash
    # In Tailscale admin console
    1. Revoke old key
@@ -130,18 +142,20 @@ Bastion never appears in tailscale status
    ```
 
 3. **Check ACLs:**
+
    - Ensure `tag:ci` and `tag:bastion` are allowed to communicate
    - Review Tailscale ACL policy
 
 4. **Increase Timeout:**
    ```yaml
    env:
-     BASTION_WAIT_TIMEOUT: 600  # 10 minutes
+     BASTION_WAIT_TIMEOUT: 600 # 10 minutes
    ```
 
 ### ❌ OAuth Key Invalid
 
 **Symptoms:**
+
 ```
 Error: Invalid OAuth client key
 Tailscale authentication failed
@@ -152,6 +166,7 @@ Tailscale authentication failed
 1. Verify OAuth key scope includes `devices:write`
 
 2. Regenerate OAuth client:
+
    - Go to Tailscale Settings → OAuth Clients
    - Generate new client with `devices:write` scope
    - Update `TAILSCALE_OAUTH_KEY` secret
@@ -161,6 +176,7 @@ Tailscale authentication failed
 ### ❌ Device Name Conflict
 
 **Symptoms:**
+
 ```
 Error: Device name already exists
 Hostname conflict in Tailscale network
@@ -181,6 +197,7 @@ Hostname conflict in Tailscale network
 ### ❌ Bastion Instance Never Starts
 
 **Symptoms:**
+
 ```
 Instance stuck in BUILD state
 Instance shows ERROR status
@@ -189,16 +206,19 @@ Instance shows ERROR status
 **Solutions:**
 
 1. **Check Instance Status:**
+
    ```bash
    openstack server show bastion-gh-XXXXX
    ```
 
 2. **View Console Log:**
+
    ```bash
    openstack console log show bastion-gh-XXXXX --lines 100
    ```
 
 3. **Common Causes:**
+
    - Insufficient quota
    - Invalid flavor
    - Network issues
@@ -206,12 +226,13 @@ Instance shows ERROR status
 
 4. **Try Different Base Image:**
    ```yaml
-   bastion_image: "Ubuntu 24.04"  # Try newer version
+   bastion_image: "Ubuntu 24.04" # Try newer version
    ```
 
 ### ❌ Cloud-Init Failed
 
 **Symptoms:**
+
 ```
 Bastion instance running but never joins Tailscale
 SSH connection refused
@@ -220,17 +241,20 @@ SSH connection refused
 **Solutions:**
 
 1. **Check Console Output:**
+
    ```bash
    openstack console log show bastion-gh-XXXXX --lines 200
    ```
 
 2. **Access via VNC Console:**
+
    ```bash
    openstack console url show bastion-gh-XXXXX
    # Open URL in browser
    ```
 
 3. **Common Cloud-Init Errors:**
+
    - Network not available during boot
    - Tailscale install script failed
    - Auth key expired or invalid
@@ -244,6 +268,7 @@ SSH connection refused
 ### ❌ SSH Connection Failed
 
 **Symptoms:**
+
 ```
 SSH connection timeout
 Permission denied (publickey)
@@ -252,16 +277,19 @@ Permission denied (publickey)
 **Solutions:**
 
 1. **Verify Bastion is in Tailscale:**
+
    ```bash
    sudo tailscale status | grep bastion
    ```
 
 2. **Test Connectivity:**
+
    ```bash
    ping <bastion-tailscale-ip>
    ```
 
 3. **Check SSH Service:**
+
    - Access via VNC console
    - Run `systemctl status sshd`
    - Run `systemctl status ssh`
@@ -277,6 +305,7 @@ Permission denied (publickey)
 ### ❌ Packer Validation Failed
 
 **Symptoms:**
+
 ```
 Error: Invalid template syntax
 Error: Missing required variable
@@ -285,6 +314,7 @@ Error: Missing required variable
 **Solutions:**
 
 1. **Test Template Locally:**
+
    ```bash
    cd packer
    packer init templates/
@@ -293,16 +323,18 @@ Error: Missing required variable
    ```
 
 2. **Check Variable Files:**
+
    - Ensure all required variables are defined
    - Check for syntax errors in `.pkrvars.hcl` files
 
 3. **Verify Bastion Variables:**
+
    ```hcl
    variable "bastion_host" {
      type    = string
      default = ""
    }
-   
+
    variable "bastion_user" {
      type    = string
      default = "root"
@@ -312,6 +344,7 @@ Error: Missing required variable
 ### ❌ Packer Build Failed
 
 **Symptoms:**
+
 ```
 Error: Timeout waiting for SSH
 Error: Connection refused
@@ -321,6 +354,7 @@ Build failed during provisioning
 **Solutions:**
 
 1. **Enable Debug Logging:**
+
    - Set workflow input `debug_mode: true`
    - Or add to workflow:
      ```yaml
@@ -329,11 +363,13 @@ Build failed during provisioning
      ```
 
 2. **Check Bastion Connectivity:**
+
    - Verify bastion can reach build instance
    - Check network security groups
    - Verify SSH port is open
 
 3. **Increase Timeouts:**
+
    ```hcl
    ssh_timeout = "20m"
    ssh_handshake_attempts = 20
@@ -348,6 +384,7 @@ Build failed during provisioning
 ### ❌ Plugin Installation Failed
 
 **Symptoms:**
+
 ```
 Error: Failed to install plugin
 Plugin not found
@@ -356,11 +393,13 @@ Plugin not found
 **Solutions:**
 
 1. **Initialize Plugins:**
+
    ```bash
    packer init templates/
    ```
 
 2. **Check Required Plugins:**
+
    ```hcl
    packer {
      required_plugins {
@@ -388,6 +427,7 @@ Plugin not found
 ### ❌ Cannot Reach OpenStack API
 
 **Symptoms:**
+
 ```
 Error: Connection timeout to auth.vexxhost.net
 Error: Unable to reach OpenStack endpoint
@@ -396,11 +436,13 @@ Error: Unable to reach OpenStack endpoint
 **Solutions:**
 
 1. **Verify Auth URL:**
+
    ```bash
    curl -I https://auth.vexxhost.net/v3
    ```
 
 2. **Check GitHub Runner Network:**
+
    - GitHub runners should have internet access
    - No additional firewall rules needed
 
@@ -415,6 +457,7 @@ Error: Unable to reach OpenStack endpoint
 ### ❌ Bastion Cannot Reach Build Instance
 
 **Symptoms:**
+
 ```
 Packer SSH timeout
 Bastion cannot connect to target
@@ -423,6 +466,7 @@ Bastion cannot connect to target
 **Solutions:**
 
 1. **Check Network Configuration:**
+
    - Verify both instances on same network
    - Check security group rules
    - Verify network exists:
@@ -431,12 +475,14 @@ Bastion cannot connect to target
      ```
 
 2. **Update Network in Workflow:**
+
    ```yaml
    env:
      OPENSTACK_NETWORK: "your-network-name"
    ```
 
 3. **Check Security Groups:**
+
    ```bash
    openstack security group list
    openstack security group rule list default
@@ -458,6 +504,7 @@ Bastion cannot connect to target
 ### Enable Verbose Logging
 
 **In Workflow:**
+
 ```yaml
 env:
   PACKER_LOG: 1
@@ -465,11 +512,13 @@ env:
 ```
 
 **In Workflow Dispatch:**
+
 - Set `debug_mode: true`
 
 ### View Bastion Logs
 
 **Access Cloud-Init Logs:**
+
 ```bash
 # Via SSH (if accessible)
 ssh root@<bastion-tailscale-ip>
@@ -478,6 +527,7 @@ cloud-init status --long
 ```
 
 **Via Console:**
+
 ```bash
 openstack console log show bastion-gh-XXXXX --lines 200
 ```
@@ -485,6 +535,7 @@ openstack console log show bastion-gh-XXXXX --lines 200
 ### Manual Bastion Testing
 
 **Launch Test Bastion:**
+
 ```bash
 # Create cloud-init file
 cat > test-cloud-init.yaml <<EOF
@@ -513,6 +564,7 @@ openstack server delete test-bastion
 ### Check Tailscale Status
 
 **On GitHub Runner:**
+
 ```bash
 sudo tailscale status
 sudo tailscale ping <bastion-hostname>
@@ -520,6 +572,7 @@ sudo tailscale netcheck
 ```
 
 **View Logs:**
+
 ```bash
 sudo journalctl -u tailscaled
 ```
@@ -535,6 +588,7 @@ sudo journalctl -u tailscaled
 ### Live Debugging
 
 **Add Debugging Step:**
+
 ```yaml
 - name: Debug - List resources
   if: failure()
@@ -542,10 +596,10 @@ sudo journalctl -u tailscaled
     echo "=== OpenStack Resources ==="
     openstack server list
     openstack network list
-    
+
     echo "=== Tailscale Status ==="
     sudo tailscale status
-    
+
     echo "=== Environment ==="
     env | grep -E '(OS_|BASTION_)' | sort
 ```
@@ -580,17 +634,20 @@ PACKER_LOG=1 packer build -var-file=... template.pkr.hcl
 ## Getting Help
 
 ### Check Documentation
+
 - Main README: `README.md`
 - Quick Start: `docs/QUICK_START.md`
 - This guide: `docs/TROUBLESHOOTING.md`
 
 ### View Logs
+
 - GitHub Actions logs
 - Packer logs artifact
 - Bastion logs artifact
 - OpenStack console logs
 
 ### Community Support
+
 - GitHub Discussions
 - Tailscale Community Forum
 - VexxHost Support Portal

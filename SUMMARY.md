@@ -7,9 +7,11 @@ This project provides a complete GitHub Actions workflow for building Packer ima
 ## What Was Created
 
 ### 1. GitHub Actions Workflow
+
 **File:** `.github/workflows/packer-vexxhost-bastion-build.yaml`
 
 A comprehensive workflow that:
+
 - ✅ Connects GitHub Actions runner to Tailscale VPN
 - ✅ Launches ephemeral bastion host on VexxHost
 - ✅ Waits for bastion to join Tailscale network
@@ -19,6 +21,7 @@ A comprehensive workflow that:
 - ✅ Provides detailed job summaries
 
 **Features:**
+
 - Manual trigger with configurable inputs
 - Automatic trigger on push to packer files
 - Support for multiple templates and variable files
@@ -29,6 +32,7 @@ A comprehensive workflow that:
 ### 2. Documentation
 
 #### Main README (`README.md`)
+
 - Project overview and features
 - Complete setup instructions
 - Repository structure guide
@@ -39,6 +43,7 @@ A comprehensive workflow that:
 - CI/CD integration examples
 
 #### Quick Start Guide (`docs/QUICK_START.md`)
+
 - Step-by-step setup (15-20 minutes)
 - Tailscale credential setup
 - VexxHost credential setup
@@ -48,6 +53,7 @@ A comprehensive workflow that:
 - Quick reference commands
 
 #### Troubleshooting Guide (`docs/TROUBLESHOOTING.md`)
+
 - OpenStack issues and solutions
 - Tailscale connectivity problems
 - Bastion host issues
@@ -59,6 +65,7 @@ A comprehensive workflow that:
 ### 3. Example Packer Templates
 
 #### Builder Template (`examples/templates/builder.pkr.hcl`)
+
 - Complete HCL2 Packer template
 - OpenStack source configuration
 - Bastion host support (conditional)
@@ -68,18 +75,21 @@ A comprehensive workflow that:
 - Metadata tagging
 
 **Key Features:**
+
 - Supports both bastion and direct connection modes
 - Configurable timeouts and retries
 - Cloud-init aware provisioning
 - Production-ready defaults
 
 #### Variables File (`examples/vars/ubuntu-22.04.pkrvars.hcl`)
+
 - Ubuntu 22.04 configuration
 - Network and region settings
 - Instance flavor configuration
 - SSH and timeout settings
 
 #### Provisioning Script (`examples/provision/baseline.sh`)
+
 - System package updates
 - Essential tools installation
 - Python and development tools
@@ -91,7 +101,9 @@ A comprehensive workflow that:
 ### 4. Configuration Files
 
 #### Pre-commit Config (`.pre-commit-config.yaml`)
+
 Automated code quality checks:
+
 - Trailing whitespace removal
 - YAML validation
 - Shellcheck for bash scripts
@@ -101,14 +113,18 @@ Automated code quality checks:
 - Private key detection
 
 #### Yamllint Config (`.yamllint.conf`)
+
 YAML style enforcement:
+
 - 120 character line limit
 - 2-space indentation
 - Consistent truthy values
 - Comment spacing rules
 
 #### Gitignore (`.gitignore`)
+
 Excludes:
+
 - Packer cache and builds
 - Cloud credentials
 - SSH keys
@@ -119,7 +135,9 @@ Excludes:
 ### 5. Testing Tools
 
 #### Template Validator (`test-templates.sh`)
+
 Automated testing script that:
+
 - Checks Packer installation
 - Initializes required plugins
 - Validates template formatting
@@ -160,46 +178,55 @@ Automated testing script that:
 ## Workflow Execution Flow
 
 1. **Preparation** (30s)
+
    - Checkout repository code
    - Find Packer directory
    - Check for changes
 
 2. **Tailscale Setup** (15s)
+
    - Connect runner to Tailscale network
    - Authenticate with OAuth key
    - Tag as CI runner
 
 3. **OpenStack Setup** (10s)
+
    - Install OpenStack CLI
    - Configure credentials from secrets
    - Test connectivity
 
 4. **Bastion Launch** (60-90s)
+
    - Generate cloud-init script
    - Create VexxHost instance
    - Wait for instance ready
 
 5. **Bastion Connection** (30-60s)
+
    - Wait for Tailscale join
    - Verify SSH connectivity
    - Store bastion IP
 
 6. **Packer Setup** (30s)
+
    - Install Packer
    - Create cloud config files
    - Initialize plugins
 
 7. **Validation** (30s)
+
    - Validate all templates
    - Check syntax and variables
    - Initialize required plugins
 
 8. **Build** (5-15 minutes)
+
    - Build images via bastion
    - Run provisioning scripts
    - Create snapshots
 
 9. **Artifacts** (10s)
+
    - Upload Packer logs
    - Upload bastion diagnostics
    - Store build artifacts
@@ -212,10 +239,12 @@ Automated testing script that:
 ## Required GitHub Secrets
 
 ### Tailscale (2 secrets)
+
 - `TAILSCALE_OAUTH_KEY` - OAuth client for runner
 - `TAILSCALE_AUTH_KEY` - Auth key for bastion
 
 ### VexxHost (6 secrets)
+
 - `VEXXHOST_AUTH_URL` - OpenStack auth endpoint
 - `VEXXHOST_PROJECT_ID` - Project ID
 - `VEXXHOST_PROJECT_NAME` - Project name
@@ -224,6 +253,7 @@ Automated testing script that:
 - `VEXXHOST_REGION` - Region (e.g., ca-ymq-1)
 
 ### Optional (2 secrets)
+
 - `CLOUD_ENV_B64` - Base64 encoded Packer cloud env
 - `CLOUDS_YAML_B64` - Base64 encoded clouds.yaml
 
@@ -256,6 +286,7 @@ packer-jobs/
 ## Key Features
 
 ### Security
+
 - ✅ All credentials stored as GitHub secrets
 - ✅ Ephemeral bastion (auto-deleted)
 - ✅ Encrypted VPN (Tailscale)
@@ -264,6 +295,7 @@ packer-jobs/
 - ✅ Private key detection in pre-commit
 
 ### Automation
+
 - ✅ Fully automated workflow
 - ✅ Auto-cleanup on success/failure
 - ✅ Parallel build support
@@ -272,6 +304,7 @@ packer-jobs/
 - ✅ Matrix builds ready
 
 ### Developer Experience
+
 - ✅ Clear documentation
 - ✅ Example templates
 - ✅ Validation scripts
@@ -280,6 +313,7 @@ packer-jobs/
 - ✅ Comprehensive logging
 
 ### Cost Optimization
+
 - ✅ Ephemeral resources
 - ✅ Auto-cleanup
 - ✅ Configurable instance sizes
@@ -290,12 +324,14 @@ packer-jobs/
 ## Usage Examples
 
 ### Basic Build
+
 ```bash
 # Via GitHub UI
 Actions → Packer Build → Run workflow
 ```
 
 ### Custom Template
+
 ```yaml
 # Workflow dispatch inputs
 packer_template: "docker.pkr.hcl"
@@ -305,6 +341,7 @@ debug_mode: true
 ```
 
 ### Automatic Trigger
+
 ```yaml
 # Triggers on push to main
 git add packer/
@@ -313,21 +350,24 @@ git push origin main
 ```
 
 ### Scheduled Builds
+
 ```yaml
 # In workflow (already configured)
 on:
   schedule:
-    - cron: '0 2 * * 1'  # Weekly
+    - cron: "0 2 * * 1" # Weekly
 ```
 
 ## Testing
 
 ### Validate Templates Locally
+
 ```bash
 ./test-templates.sh
 ```
 
 ### Run Pre-commit Checks
+
 ```bash
 pip install pre-commit
 pre-commit install
@@ -335,6 +375,7 @@ pre-commit run --all-files
 ```
 
 ### Test OpenStack Connection
+
 ```bash
 export OS_AUTH_URL="https://auth.vexxhost.net/v3"
 # ... other exports
@@ -342,6 +383,7 @@ openstack server list
 ```
 
 ### Validate Workflow YAML
+
 ```bash
 python3 -c "import yaml; yaml.safe_load(open('.github/workflows/packer-vexxhost-bastion-build.yaml'))"
 ```
@@ -349,13 +391,15 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/packer-vexxhost-
 ## Integration with Existing Projects
 
 ### Use with Existing Templates
+
 1. Ensure templates have `bastion_host` variable:
+
    ```hcl
    variable "bastion_host" {
      type    = string
      default = ""
    }
-   
+
    source "openstack" "image" {
      ssh_bastion_host = var.bastion_host != "" ? var.bastion_host : null
    }
@@ -366,6 +410,7 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/packer-vexxhost-
 3. Configure secrets and run
 
 ### Use as Reusable Workflow
+
 ```yaml
 # In your repo's workflow
 jobs:
@@ -377,18 +422,21 @@ jobs:
 ## Customization Points
 
 ### Bastion Configuration
+
 - Instance flavor
 - Base image
 - Network
 - Wait timeout
 
 ### Build Configuration
+
 - Max builds per run
 - Template filters
 - Variable filters
 - Debug logging
 
 ### Cleanup Behavior
+
 - Artifact retention
 - Log verbosity
 - Cleanup verification
@@ -396,12 +444,14 @@ jobs:
 ## Troubleshooting Quick Reference
 
 ### Common Issues
+
 1. **Auth failed** → Check secrets
 2. **Tailscale timeout** → Check auth key settings
 3. **Bastion no show** → Check cloud-init logs
 4. **Build failed** → Enable debug mode
 
 ### Debug Commands
+
 ```bash
 # Check workflow
 gh run view --log
@@ -416,12 +466,12 @@ sudo tailscale status
 
 ## Cost Breakdown
 
-| Resource | Cost | Frequency | Monthly |
-|----------|------|-----------|---------|
-| Bastion (15 min) | $0.02 | 30 builds | $0.60 |
-| Build instance | Included | - | - |
-| Tailscale | Free | Unlimited | $0.00 |
-| **Total** | | | **~$0.60** |
+| Resource         | Cost     | Frequency | Monthly    |
+| ---------------- | -------- | --------- | ---------- |
+| Bastion (15 min) | $0.02    | 30 builds | $0.60      |
+| Build instance   | Included | -         | -          |
+| Tailscale        | Free     | Unlimited | $0.00      |
+| **Total**        |          |           | **~$0.60** |
 
 ## Next Steps
 
@@ -445,6 +495,7 @@ SPDX-License-Identifier: Apache-2.0
 ## References
 
 Based on patterns from:
+
 - `releng-common-packer` - Packer validation workflows
 - `releng-builder-askb` - Tailscale bastion implementation
 - Your provided Quick Start Guide
@@ -452,6 +503,7 @@ Based on patterns from:
 ## Success Metrics
 
 After setup, you should have:
+
 - ✅ < 20 minute time to first build
 - ✅ < $1/month operational cost
 - ✅ 100% automated builds

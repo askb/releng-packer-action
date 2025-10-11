@@ -13,6 +13,7 @@ This document provides the required Tailscale configuration for using the Packer
 ### 1. Tailscale ACL Configuration
 
 The action requires specific Access Control List (ACL) rules in your Tailscale network to allow:
+
 - GitHub Actions runners (`tag:ci`) to connect to the tailnet
 - Bastion hosts (`tag:bastion`) to join the network
 - SSH connections from runners to bastion hosts
@@ -21,55 +22,57 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
 
 ```json
 {
-	"tagOwners": {
-		"tag:ci":      ["autogroup:admin", "autogroup:owner"],
-		"tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"],
-	},
+  "tagOwners": {
+    "tag:ci": ["autogroup:admin", "autogroup:owner"],
+    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"]
+  },
 
-	"acls": [
-		{
-			"action": "accept",
-			"src":    ["autogroup:admin", "tag:ci", "tag:bastion"],
-			"dst":    ["*:*"],
-		},
-	],
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["autogroup:admin", "tag:ci", "tag:bastion"],
+      "dst": ["*:*"]
+    }
+  ],
 
-	"grants": [
-		{
-			"src": ["*"],
-			"dst": ["*"],
-			"ip":  ["*"],
-		},
-	],
+  "grants": [
+    {
+      "src": ["*"],
+      "dst": ["*"],
+      "ip": ["*"]
+    }
+  ],
 
-	"ssh": [
-		{
-			"action": "accept",
-			"src":    ["autogroup:member", "tag:ci"],
-			"dst":    ["tag:bastion"],
-			"users":  ["root", "ubuntu", "autogroup:nonroot"],
-		},
-	],
+  "ssh": [
+    {
+      "action": "accept",
+      "src": ["autogroup:member", "tag:ci"],
+      "dst": ["tag:bastion"],
+      "users": ["root", "ubuntu", "autogroup:nonroot"]
+    }
+  ],
 
-	"autoApprovers": {
-		"routes": {
-			"0.0.0.0/0": ["autogroup:admin"],
-			"::/0":      ["autogroup:admin"],
-		},
-		"exitNode": ["autogroup:admin"],
-	},
+  "autoApprovers": {
+    "routes": {
+      "0.0.0.0/0": ["autogroup:admin"],
+      "::/0": ["autogroup:admin"]
+    },
+    "exitNode": ["autogroup:admin"]
+  }
 }
 ```
 
 ### Configuration Explanation
 
 #### Tag Owners
+
 ```json
 "tagOwners": {
     "tag:ci":      ["autogroup:admin", "autogroup:owner"],
     "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"],
 }
 ```
+
 - **`tag:ci`**: Assigned to GitHub Actions runners
   - Owners: Admins and owners can create devices with this tag
 - **`tag:bastion`**: Assigned to ephemeral bastion hosts
@@ -77,6 +80,7 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
   - Note: `tag:ci` is listed as an owner to allow the workflow to create bastions
 
 #### ACLs (Network Access)
+
 ```json
 "acls": [
     {
@@ -86,10 +90,12 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
     },
 ]
 ```
+
 - Allows admins, CI runners, and bastion hosts to access all services on all hosts
 - Required for bastion to access VexxHost OpenStack network
 
 #### Grants (IP-level Access)
+
 ```json
 "grants": [
     {
@@ -99,10 +105,12 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
     },
 ]
 ```
+
 - Allows all IP-level traffic between nodes
 - Simplifies connectivity for the build process
 
 #### SSH Rules (Critical for Action)
+
 ```json
 "ssh": [
     {
@@ -113,6 +121,7 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
     },
 ]
 ```
+
 - **Most Important Rule**: Allows SSH from CI runners to bastion hosts
 - `src`: Who can SSH in (members and CI runners)
 - `dst`: Where they can SSH to (bastion hosts)
@@ -121,6 +130,7 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
 **Without this rule, Packer builds will fail with "tailnet policy does not permit you to SSH to this node"**
 
 #### Auto Approvers (Optional)
+
 ```json
 "autoApprovers": {
     "routes": {
@@ -130,6 +140,7 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
     "exitNode": ["autogroup:admin"],
 }
 ```
+
 - Allows admins to approve subnet routes and exit nodes
 - Not strictly required for the action, but useful for network management
 
@@ -153,12 +164,16 @@ After configuring ACLs, create an auth key for GitHub Actions:
 After applying the ACL configuration, you can test it:
 
 #### Test ACL Syntax
+
 Tailscale will validate your ACL syntax when you save it. Look for:
+
 - ✅ Green checkmark: Configuration is valid
 - ❌ Red error: Fix syntax errors before proceeding
 
 #### Test SSH Access
+
 Once a build runs:
+
 1. Check that bastion appears in Tailscale admin console
 2. Verify it has `tag:bastion`
 3. From your local machine (if you're a member):
@@ -173,6 +188,7 @@ Once a build runs:
 **Cause**: Auth key doesn't have permission to create devices with `tag:bastion`
 
 **Solution**:
+
 1. Check that `tag:bastion` is listed in the auth key's tags
 2. Verify `tagOwners` includes `tag:ci` as an owner of `tag:bastion`
 3. Create a new auth key with correct tag permissions
@@ -182,6 +198,7 @@ Once a build runs:
 **Cause**: Missing or incorrect SSH rule in ACL
 
 **Solution**:
+
 1. Verify the SSH rule is present in your ACL
 2. Ensure `tag:ci` is in the `src` array
 3. Ensure `tag:bastion` is in the `dst` array
@@ -192,6 +209,7 @@ Once a build runs:
 **Cause**: SSH agent not running (should be handled by action)
 
 **Solution**:
+
 - This should be automatically handled by the action
 - If it persists, check the "Setup SSH agent" step in the workflow logs
 
@@ -200,6 +218,7 @@ Once a build runs:
 **Cause**: Bastion failed to join tailnet or cloud-init failed
 
 **Solution**:
+
 1. Check OpenStack console logs:
    ```bash
    openstack console log show bastion-gh-XXXXXX
@@ -215,11 +234,13 @@ Once a build runs:
 The provided configuration is permissive to simplify setup. For production:
 
 1. **Restrict SSH Users**: Instead of allowing all users, specify only what's needed:
+
    ```json
    "users": ["ubuntu", "root"]  // Remove autogroup:nonroot if not needed
    ```
 
 2. **Limit Network Access**: Instead of `*:*`, specify only required ports:
+
    ```json
    "dst": ["tag:bastion:22,443"]  // Only SSH and HTTPS
    ```
@@ -239,6 +260,7 @@ The provided configuration is permissive to simplify setup. For production:
 ### Audit Logging
 
 Enable Tailscale audit logging to track:
+
 - Device connections/disconnections
 - SSH sessions
 - ACL changes
@@ -261,8 +283,8 @@ If you already have an ACL configuration, merge the sections:
   "tagOwners": {
     "tag:existing": ["autogroup:admin"],
     // Add these:
-    "tag:ci":      ["autogroup:admin", "autogroup:owner"],
-    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"],
+    "tag:ci": ["autogroup:admin", "autogroup:owner"],
+    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci"]
   },
 
   // Your existing acls
@@ -271,9 +293,9 @@ If you already have an ACL configuration, merge the sections:
     // Add this:
     {
       "action": "accept",
-      "src":    ["tag:ci", "tag:bastion"],
-      "dst":    ["*:*"],
-    },
+      "src": ["tag:ci", "tag:bastion"],
+      "dst": ["*:*"]
+    }
   ],
 
   // Add or merge with existing ssh section
@@ -282,17 +304,18 @@ If you already have an ACL configuration, merge the sections:
     // Add this:
     {
       "action": "accept",
-      "src":    ["tag:ci"],
-      "dst":    ["tag:bastion"],
-      "users":  ["root", "ubuntu", "autogroup:nonroot"],
-    },
-  ],
+      "src": ["tag:ci"],
+      "dst": ["tag:bastion"],
+      "users": ["root", "ubuntu", "autogroup:nonroot"]
+    }
+  ]
 }
 ```
 
 ## Support
 
 If you encounter issues:
+
 1. Check Tailscale admin console for device status
 2. Review workflow logs for error messages
 3. Verify ACL syntax in Tailscale admin console

@@ -20,15 +20,15 @@
 
 ### Required GitHub Secrets
 
-| Secret Name | How to Get It |
-|-------------|---------------|
-| `CLOUD_ENV_JSON_B64` | `cat cloud-env.json \| base64 -w 0` |
-| `VEXXHOST_AUTH_URL` | `https://auth.vexxhost.net/v3/` |
-| `VEXXHOST_PROJECT_ID` | From VexxHost dashboard |
-| `VEXXHOST_USERNAME` | Your VexxHost username |
-| `VEXXHOST_PASSWORD_B64` | `echo "password" \| base64` |
-| `VEXXHOST_NETWORK_ID` | `openstack network list` (UUID) |
-| `TAILSCALE_AUTH_KEY` | https://login.tailscale.com/admin/settings/keys |
+| Secret Name             | How to Get It                                   |
+| ----------------------- | ----------------------------------------------- |
+| `CLOUD_ENV_JSON_B64`    | `cat cloud-env.json \| base64 -w 0`             |
+| `VEXXHOST_AUTH_URL`     | `https://auth.vexxhost.net/v3/`                 |
+| `VEXXHOST_PROJECT_ID`   | From VexxHost dashboard                         |
+| `VEXXHOST_USERNAME`     | Your VexxHost username                          |
+| `VEXXHOST_PASSWORD_B64` | `echo "password" \| base64`                     |
+| `VEXXHOST_NETWORK_ID`   | `openstack network list` (UUID)                 |
+| `TAILSCALE_AUTH_KEY`    | https://login.tailscale.com/admin/settings/keys |
 
 ### Cloud Environment JSON Format
 

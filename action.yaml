@@ -16,7 +16,7 @@ inputs:
     options:
       - validate
       - build
-  
+
   # Packer Configuration
   packer_template:
     description: "Path to Packer template file (relative to packer_working_dir)"
@@ -36,7 +36,7 @@ inputs:
     description: "OpenStack cloud name from clouds.yaml (optional)"
     required: false
     default: ""
-  
+
   # Cloud Configuration Files (base64 encoded)
   cloud_env_json:
     description: "Cloud environment JSON configuration (base64 encoded)"
@@ -45,7 +45,7 @@ inputs:
     description: "OpenStack clouds.yaml configuration (base64 encoded, optional)"
     required: false
     default: ""
-  
+
   # VexxHost/OpenStack Credentials
   vexxhost_auth_url:
     description: "VexxHost/OpenStack auth URL"
@@ -66,7 +66,7 @@ inputs:
   vexxhost_network_id:
     description: "VexxHost/OpenStack network UUID for Packer builds"
     required: true
-  
+
   # Bastion Configuration
   bastion_flavor:
     description: "OpenStack flavor for bastion instance"
@@ -88,7 +88,7 @@ inputs:
     description: "Timeout in seconds to wait for bastion to be ready"
     required: false
     default: "300"
-  
+
   # Tailscale Configuration (required for build mode only)
   tailscale_auth_key:
     description: "Tailscale auth key for bastion and runner (required for build mode)"
@@ -98,7 +98,7 @@ inputs:
     description: "Tailscale version"
     required: false
     default: "latest"
-  
+
   # Build Options
   debug_mode:
     description: "Enable debug logging"
@@ -132,7 +132,7 @@ runs:
     # ========================================
     - name: Setup Tailscale VPN
       if: inputs.mode == 'build'
-      uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92  # v2.0.3
+      uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92 # v2.0.3
       with:
         authkey: ${{ inputs.tailscale_auth_key }}
         version: ${{ inputs.tailscale_version }}
@@ -151,7 +151,7 @@ runs:
     # ========================================
     - name: Setup Python and OpenStack CLI
       if: inputs.mode == 'build'
-      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a20  # v5.3.0
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a20 # v5.3.0
       with:
         python-version: "3.11"
 
@@ -178,7 +178,7 @@ runs:
         else
           PASSWORD="$OS_PASSWORD"
         fi
-        
+
         echo "OS_AUTH_URL=${OS_AUTH_URL}" >> $GITHUB_ENV
         echo "OS_PROJECT_ID=${OS_PROJECT_ID}" >> $GITHUB_ENV
         echo "OS_USERNAME=${OS_USERNAME}" >> $GITHUB_ENV
@@ -196,7 +196,7 @@ runs:
       shell: bash
       run: |
         BASTION_NAME="bastion-gh-${{ github.run_id }}"
-        
+
         cat > cloud-init.yaml <<'EOF'
         #cloud-config
         hostname: ${BASTION_HOSTNAME}
@@ -226,11 +226,11 @@ runs:
         runcmd:
           - /usr/local/bin/bastion-init.sh
         EOF
-        
+
         # Substitute variables
         sed -i "s/\${BASTION_HOSTNAME}/$BASTION_NAME/g" cloud-init.yaml
         sed -i "s/\${TAILSCALE_AUTH_KEY}/${{ inputs.tailscale_auth_key }}/g" cloud-init.yaml
-        
+
         echo "BASTION_NAME=$BASTION_NAME" >> $GITHUB_ENV
 
     - name: Launch bastion instance
@@ -251,7 +251,7 @@ runs:
       run: |
         timeout=${{ inputs.bastion_wait_timeout }}
         elapsed=0
-        
+
         while [ $elapsed -lt $timeout ]; do
           if sudo tailscale status | grep -q "${{ env.BASTION_NAME }}"; then
             BASTION_IP=$(sudo tailscale status | grep "${{ env.BASTION_NAME }}" | awk '{print $1}')
@@ -262,7 +262,7 @@ runs:
           sleep 5
           elapsed=$((elapsed + 5))
         done
-        
+
         echo "❌ Bastion failed to join Tailscale within ${timeout}s"
         exit 1
 
@@ -277,7 +277,7 @@ runs:
     # Step 4: Setup Packer
     # ========================================
     - name: Setup Packer
-      uses: hashicorp/setup-packer@1aa358be5cf73883762b302a3a03abd66e75b232  # v3.1.0
+      uses: hashicorp/setup-packer@1aa358be5cf73883762b302a3a03abd66e75b232 # v3.1.0
       with:
         version: ${{ inputs.packer_version }}
 
@@ -291,11 +291,11 @@ runs:
         else
           echo '${{ inputs.cloud_env_json }}' > cloud-env.json
         fi
-        
+
         # Update ssh_proxy_host with bastion IP
         jq --arg ip "${{ env.BASTION_IP }}" '.ssh_proxy_host = $ip' cloud-env.json > cloud-env.tmp.json
         mv cloud-env.tmp.json cloud-env.json
-        
+
         echo "✅ Cloud environment JSON created with bastion IP: ${{ env.BASTION_IP }}"
 
     - name: Create clouds.yaml (optional)
@@ -331,9 +331,9 @@ runs:
         OS_CLOUD: ${{ inputs.os_cloud }}
       run: |
         set -e
-        
+
         VALIDATE_CMD="packer validate"
-        
+
         # Build mode: use cloud-env.json and bastion
         if [ "${{ inputs.mode }}" == "build" ]; then
           VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.json"
@@ -343,9 +343,9 @@ runs:
           # Validate mode: just syntax check with vars
           VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ inputs.packer_vars_file }}"
         fi
-        
+
         VALIDATE_CMD="$VALIDATE_CMD ${{ inputs.packer_template }}"
-        
+
         echo "Running: $VALIDATE_CMD"
         if $VALIDATE_CMD; then
           echo "✅ Packer validation successful"
@@ -370,9 +370,9 @@ runs:
           -var="bastion_host=${{ env.BASTION_IP }}" \
           -var="bastion_user=root" \
           "${{ inputs.packer_template }}"
-        
+
         BUILD_EXIT_CODE=$?
-        
+
         if [ $BUILD_EXIT_CODE -eq 0 ]; then
           echo "status=success" >> $GITHUB_OUTPUT
           echo "✅ Packer build completed successfully"
@@ -382,7 +382,7 @@ runs:
           echo "❌ Packer build failed with exit code $BUILD_EXIT_CODE"
           exit $BUILD_EXIT_CODE
         fi
-    
+
     - name: Set validation success output (Validate Mode)
       if: inputs.mode == 'validate'
       id: packer-validate

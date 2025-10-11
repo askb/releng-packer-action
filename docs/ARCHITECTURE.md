@@ -49,17 +49,19 @@ Configure these in your repository: **Settings → Secrets and variables → Act
 
 ### Tailscale Secrets
 
-| Secret Name | Description | How to Get |
-|-------------|-------------|------------|
-| `TAILSCALE_OAUTH_KEY` | OAuth client for GitHub runner | [Tailscale Admin Console](https://login.tailscale.com/admin/settings/oauth) → Generate OAuth client |
-| `TAILSCALE_AUTH_KEY` | Auth key for bastion host | [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys) → Generate auth key (ephemeral, reusable) |
+| Secret Name           | Description                    | How to Get                                                                                                           |
+| --------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `TAILSCALE_OAUTH_KEY` | OAuth client for GitHub runner | [Tailscale Admin Console](https://login.tailscale.com/admin/settings/oauth) → Generate OAuth client                  |
+| `TAILSCALE_AUTH_KEY`  | Auth key for bastion host      | [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys) → Generate auth key (ephemeral, reusable) |
 
 **Tailscale OAuth Key Settings:**
+
 - **Devices:** Write access
 - **Ephemeral:** Recommended (auto-cleanup)
 - **Tags:** `tag:ci` for GitHub runner, `tag:bastion` for bastion host
 
 **Tailscale Auth Key Settings:**
+
 - ✅ Ephemeral (bastion auto-removed after disconnect)
 - ✅ Reusable (multiple workflow runs)
 - ✅ Pre-approved (no manual approval needed)
@@ -67,16 +69,17 @@ Configure these in your repository: **Settings → Secrets and variables → Act
 
 ### VexxHost OpenStack Secrets
 
-| Secret Name | Description | Where to Find |
-|-------------|-------------|---------------|
-| `VEXXHOST_AUTH_URL` | OpenStack auth endpoint | VexxHost dashboard → API Access |
-| `VEXXHOST_PROJECT_ID` | Project/tenant ID | VexxHost dashboard → Project settings |
-| `VEXXHOST_PROJECT_NAME` | Project name | VexxHost dashboard → Project settings |
-| `VEXXHOST_USERNAME` | OpenStack username | Your VexxHost credentials |
-| `VEXXHOST_PASSWORD` | OpenStack password | Your VexxHost credentials |
-| `VEXXHOST_REGION` | Region name | VexxHost dashboard (e.g., `ca-ymq-1`) |
+| Secret Name             | Description             | Where to Find                         |
+| ----------------------- | ----------------------- | ------------------------------------- |
+| `VEXXHOST_AUTH_URL`     | OpenStack auth endpoint | VexxHost dashboard → API Access       |
+| `VEXXHOST_PROJECT_ID`   | Project/tenant ID       | VexxHost dashboard → Project settings |
+| `VEXXHOST_PROJECT_NAME` | Project name            | VexxHost dashboard → Project settings |
+| `VEXXHOST_USERNAME`     | OpenStack username      | Your VexxHost credentials             |
+| `VEXXHOST_PASSWORD`     | OpenStack password      | Your VexxHost credentials             |
+| `VEXXHOST_REGION`       | Region name             | VexxHost dashboard (e.g., `ca-ymq-1`) |
 
 **Example Values:**
+
 ```bash
 VEXXHOST_AUTH_URL=https://auth.vexxhost.net/v3
 VEXXHOST_PROJECT_ID=abc123def456...
@@ -129,17 +132,20 @@ packer-jobs/
 ### What the Cloud-Init Does
 
 1. **System Setup**
+
    - Updates packages
    - Installs required tools (curl, wget, jq, network tools)
    - Enables IP forwarding for network routing
 
 2. **Tailscale Installation**
+
    - Downloads and installs Tailscale
    - Authenticates with auth key
    - Joins Tailscale network with `tag:bastion`
    - Enables Tailscale SSH for secure access
 
 3. **Packer Installation** (Optional)
+
    - Can be enabled in cloud-init
    - Adds HashiCorp repository
    - Installs latest Packer version
@@ -155,6 +161,7 @@ packer-jobs/
 See `templates/bastion-cloud-init.yaml` for the full configuration.
 
 **Minimal cloud-init (faster boot):**
+
 ```yaml
 #cloud-config
 package_update: true
@@ -165,6 +172,7 @@ runcmd:
 ```
 
 **Full cloud-init (includes comprehensive setup):**
+
 - See `templates/bastion-cloud-init.yaml`
 - Includes network configuration, logging, ready markers
 - Used by default in workflow
@@ -198,17 +206,17 @@ source "openstack" "ubuntu" {
   password         = env("OS_PASSWORD")
   tenant_name      = env("OS_PROJECT_NAME")
   region           = env("OS_REGION_NAME")
-  
+
   # Use bastion as SSH proxy
   ssh_bastion_host     = var.bastion_host != "" ? var.bastion_host : null
   ssh_bastion_username = var.bastion_user
-  
+
   # Instance config
   image_name       = "my-custom-image"
   source_image_name = "Ubuntu 22.04"
   flavor           = "v3-standard-2"
   networks         = ["default"]
-  
+
   # SSH config
   ssh_username = "ubuntu"
   ssh_timeout  = "30m"
@@ -216,7 +224,7 @@ source "openstack" "ubuntu" {
 
 build {
   sources = ["source.openstack.ubuntu"]
-  
+
   provisioner "shell" {
     inline = [
       "echo 'Building via bastion at ${var.bastion_host}'",
@@ -236,7 +244,7 @@ Copy files to bastion and execute there:
   run: |
     # Copy Packer files to bastion
     scp -r ./common-packer/ root@${BASTION_IP}:/root/build/
-    
+
     # Copy cloud credentials
     ssh root@${BASTION_IP} << 'ENDSSH'
       export OS_AUTH_URL="${{ secrets.VEXXHOST_AUTH_URL }}"
@@ -244,7 +252,7 @@ Copy files to bastion and execute there:
       export OS_PASSWORD="${{ secrets.VEXXHOST_PASSWORD }}"
       export OS_PROJECT_NAME="${{ secrets.VEXXHOST_PROJECT_NAME }}"
       export OS_REGION_NAME="${{ secrets.VEXXHOST_REGION }}"
-      
+
       cd /root/build/common-packer
       packer build .
     ENDSSH
@@ -258,14 +266,15 @@ Copy files to bastion and execute there:
 
 ```yaml
 # In workflow dispatch inputs
-bastion_flavor: "v3-starter-2"  # Smaller for testing
+bastion_flavor: "v3-starter-2" # Smaller for testing
 
 # Or in workflow env
 env:
-  OPENSTACK_FLAVOR: "v3-standard-4"  # Larger for heavy builds
+  OPENSTACK_FLAVOR: "v3-standard-4" # Larger for heavy builds
 ```
 
 Available flavors:
+
 - `v3-starter-1` - 1 vCPU, 2GB RAM (smallest)
 - `v3-starter-2` - 1 vCPU, 4GB RAM
 - `v3-standard-2` - 2 vCPU, 8GB RAM (recommended)
@@ -308,7 +317,7 @@ Keep bastion running for development:
 
 # In workflow, disable cleanup:
 - name: Cleanup bastion instance
-  if: false  # Disable cleanup for testing
+  if: false # Disable cleanup for testing
   run: |
     openstack server delete "${{ env.BASTION_NAME }}"
 ```
@@ -320,11 +329,13 @@ Keep bastion running for development:
 ### Bastion Not Appearing in Tailscale
 
 **Check cloud-init logs via OpenStack console:**
+
 ```bash
 openstack console log show bastion-gh-12345 --lines 100
 ```
 
 **SSH to bastion via VexxHost console and check:**
+
 ```bash
 # Cloud-init status
 sudo cloud-init status --wait
@@ -339,6 +350,7 @@ sudo journalctl -u tailscaled
 ```
 
 **Common issues:**
+
 - Auth key expired → Generate new key
 - Network blocked → Check VexxHost security groups
 - Cloud-init failed → Check `/var/log/cloud-init.log`
@@ -347,6 +359,7 @@ sudo journalctl -u tailscaled
 ### OpenStack Connection Failed
 
 **Test OpenStack credentials locally:**
+
 ```bash
 export OS_AUTH_URL="https://auth.vexxhost.net/v3"
 export OS_USERNAME="your-username"
@@ -367,12 +380,14 @@ openstack image list
 **Debug steps:**
 
 1. Enable Packer debug mode:
+
    ```yaml
    env:
      PACKER_LOG: 1
    ```
 
 2. Test SSH to target from bastion:
+
    ```bash
    ssh root@${BASTION_IP}
    # Then from bastion:
@@ -380,6 +395,7 @@ openstack image list
    ```
 
 3. Check network connectivity:
+
    ```bash
    ssh root@${BASTION_IP} "ping -c 3 8.8.8.8"
    ssh root@${BASTION_IP} "curl -I https://cloud-images.ubuntu.com"
@@ -393,13 +409,15 @@ openstack image list
 ### Workflow Timeout
 
 **Increase global timeout:**
+
 ```yaml
 jobs:
   packer-build-vexxhost:
-    timeout-minutes: 90  # Increase from default
+    timeout-minutes: 90 # Increase from default
 ```
 
 **Add timeouts to specific steps:**
+
 ```yaml
 - name: Wait for bastion
   timeout-minutes: 10
@@ -412,43 +430,47 @@ jobs:
 ## Cost Optimization
 
 ### 1. Use Smaller Flavor for Bastion
+
 ```yaml
-OPENSTACK_FLAVOR: "v3-starter-1"  # $0.01/hour vs $0.08/hour
+OPENSTACK_FLAVOR: "v3-starter-1" # $0.01/hour vs $0.08/hour
 ```
 
 ### 2. Enable Ephemeral Tailscale Devices
+
 - Auto-cleanup after disconnect
 - No manual device management
 - Recommended for CI/CD
 
 ### 3. Cleanup on Failure
+
 ```yaml
 - name: Cleanup
-  if: always()  # Ensures cleanup even on failure
+  if: always() # Ensures cleanup even on failure
 ```
 
 ### 4. Reuse Bastion for Multiple Builds
+
 ```yaml
 strategy:
   matrix:
     os: [ubuntu-22, ubuntu-24, debian-12]
-
 # Single bastion serves all matrix builds
 ```
 
 ### 5. Scheduled Cleanup Job
+
 ```yaml
 # Separate workflow to clean orphaned bastions
 on:
   schedule:
-    - cron: '0 * * * *'  # Hourly cleanup
+    - cron: "0 * * * *" # Hourly cleanup
 ```
 
 ---
 
 ## Security Best Practices
 
-✅ **Use ephemeral auth keys** - Auto-expire after use  
+✅ **Use ephemeral auth keys** - Auto-expire after use
 ✅ **Tag-based ACLs** - Restrict access in Tailscale ACL:
 
 ```json
@@ -472,36 +494,39 @@ on:
 }
 ```
 
-✅ **Rotate credentials** - Regularly update OpenStack passwords  
+✅ **Rotate credentials** - Regularly update OpenStack passwords
 ✅ **Use GitHub environments** - Require approval for production:
 
 ```yaml
 jobs:
   packer-build-vexxhost:
-    environment: production  # Requires approval
+    environment: production # Requires approval
 ```
 
-✅ **Enable audit logging** - Track all Tailscale connections  
-✅ **Limit secret scope** - Use environment-specific secrets  
-✅ **Monitor builds** - Set up alerts for failures  
+✅ **Enable audit logging** - Track all Tailscale connections
+✅ **Limit secret scope** - Use environment-specific secrets
+✅ **Monitor builds** - Set up alerts for failures
 
 ---
 
 ## Monitoring & Observability
 
 ### GitHub Actions
+
 - **Real-time logs:** Watch builds progress
 - **Artifact downloads:** Packer logs, bastion diagnostics
 - **Email notifications:** Build failures
 - **Status badges:** Display in README
 
 ### Tailscale Admin Console
+
 - **Device connections:** See bastion appear/disappear
 - **Activity logs:** Track all VPN connections
 - **Network stats:** Bandwidth usage
 - **ACL violations:** Security alerts
 
 ### VexxHost Dashboard
+
 - **Instance status:** Monitor bastion lifecycle
 - **Resource usage:** CPU, RAM, disk, network
 - **Billing:** Track costs per build
@@ -524,7 +549,7 @@ strategy:
         image: "Ubuntu 24.04"
       - name: debian-12
         image: "Debian 12"
-    
+
 env:
   BASTION_NAME: "gh-bastion-${{ matrix.os.name }}-${{ github.run_id }}"
   OPENSTACK_IMAGE: ${{ matrix.os.image }}
@@ -533,6 +558,7 @@ env:
 Each matrix job gets its own ephemeral bastion!
 
 **Benefits:**
+
 - Parallel execution (faster total time)
 - Isolated environments
 - Independent cleanup
@@ -563,12 +589,14 @@ Each matrix job gets its own ephemeral bastion!
 - **Cloud-Init:** https://cloudinit.readthedocs.io/
 
 ### Project Documentation
+
 - **Quick Start:** `docs/QUICK_START.md`
 - **Troubleshooting:** `docs/TROUBLESHOOTING.md`
 - **Cloud-Init Reference:** `docs/BASTION_CLOUD_INIT.md`
 - **Setup Checklist:** `CHECKLIST.md`
 
 ### Community Support
+
 - **GitHub Discussions:** Ask questions in this repository
 - **Tailscale Community:** https://forum.tailscale.com/
 - **VexxHost Support:** https://vexxhost.com/support/
@@ -602,6 +630,6 @@ graph TD
 
 ---
 
-**Version:** 1.0.0  
-**Last Updated:** 2025  
+**Version:** 1.0.0
+**Last Updated:** 2025
 **License:** Apache-2.0

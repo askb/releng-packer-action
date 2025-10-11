@@ -61,6 +61,7 @@ packer build \
 ### 4. Run via GitHub Actions
 
 The workflow will automatically:
+
 1. Create bastion host
 2. Wait for Tailscale connection
 3. Build with bastion configuration
@@ -87,7 +88,7 @@ variable "bastion_user" {
 
 source "openstack" "builder" {
   # ... other config ...
-  
+
   # SSH via bastion
   ssh_bastion_host     = var.bastion_host != "" ? var.bastion_host : null
   ssh_bastion_username = var.bastion_user
@@ -131,7 +132,7 @@ source "openstack" "docker" {
 
 build {
   sources = ["source.openstack.docker"]
-  
+
   provisioner "shell" {
     script = "provision/docker.sh"
   }
@@ -154,15 +155,15 @@ distro = "ubuntu2404"
 ```hcl
 build {
   sources = ["source.openstack.builder"]
-  
+
   provisioner "shell" {
     script = "provision/01-baseline.sh"
   }
-  
+
   provisioner "ansible" {
     playbook_file = "provision/playbook.yml"
   }
-  
+
   provisioner "shell" {
     inline = [
       "sudo apt-get clean",
@@ -182,7 +183,7 @@ for template in templates/*.pkr.hcl; do
   if [[ "$template" == *"variables"* ]]; then
     continue
   fi
-  
+
   for varfile in vars/*.pkrvars.hcl; do
     echo "Validating $template with $varfile"
     packer validate -var-file="$varfile" "$template"

@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clear votes
-        uses: lfit/gerrit-review-action@9627b9a144f2a2cad70707ddfae87c87dce60729  # v0.8
+        uses: lfit/gerrit-review-action@9627b9a144f2a2cad70707ddfae87c87dce60729 # v0.8
         with:
           host: ${{ vars.GERRIT_SERVER }}
           username: ${{ vars.GERRIT_SSH_USER }}
@@ -71,19 +71,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Gerrit Change
-        uses: lfit/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63  # v0.9
+        uses: lfit/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
         with:
           gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
           gerrit-project: ${{ inputs.GERRIT_PROJECT }}
           gerrit-url: ${{ vars.GERRIT_URL }}
           delay: "0s"
-          submodules: "true"  # Important: checkout common-packer submodule
-      
+          submodules: "true" # Important: checkout common-packer submodule
+
       - name: Update submodules
         run: git submodule update --init
-      
+
       - name: Check for packer changes
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3.0.2
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: changes
         with:
           base: ${{ inputs.GERRIT_BRANCH }}
@@ -91,7 +91,7 @@ jobs:
           filters: |
             src:
               - 'packer/**'
-      
+
       - name: Validate Packer Templates
         if: steps.changes.outputs.src == 'true'
         uses: lfit/packer-vexxhost-bastion-action@v1
@@ -108,9 +108,9 @@ jobs:
     needs: [prepare, packer-validator]
     runs-on: ubuntu-latest
     steps:
-      - uses: im-open/workflow-conclusion@e4f7c4980600fbe0818173e30931d3550801b992  # v2.2.3
+      - uses: im-open/workflow-conclusion@e4f7c4980600fbe0818173e30931d3550801b992 # v2.2.3
       - name: Set vote
-        uses: lfit/gerrit-review-action@9627b9a144f2a2cad70707ddfae87c87dce60729  # v0.8
+        uses: lfit/gerrit-review-action@9627b9a144f2a2cad70707ddfae87c87dce60729 # v0.8
         with:
           host: ${{ vars.GERRIT_SERVER }}
           username: ${{ vars.GERRIT_SSH_USER }}

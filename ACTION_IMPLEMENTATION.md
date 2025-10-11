@@ -30,9 +30,11 @@ packer-vexxhost-bastion-action/
 ## How It Works
 
 ### As a Standalone Repository
+
 The `.github/workflows/packer-vexxhost-bastion-build.yaml` workflow can still be used directly in this repository for testing and development.
 
 ### As a Reusable Action
+
 Other repositories can use this action by referencing it in their workflows:
 
 ```yaml
@@ -69,15 +71,15 @@ ci-management/ or builder-repo/
 
 The calling repository must configure these secrets:
 
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `CLOUD_ENV_JSON_B64` | Base64-encoded cloud environment JSON | See format below |
-| `VEXXHOST_AUTH_URL` | OpenStack auth URL | `https://auth.vexxhost.net/v3/` |
-| `VEXXHOST_PROJECT_ID` | Project/Tenant UUID | `61975f2c-7c17-4d69-82fa-...` |
-| `VEXXHOST_USERNAME` | OpenStack username | `user@example.com` |
-| `VEXXHOST_PASSWORD_B64` | Base64-encoded password | `base64-encoded-password` |
-| `VEXXHOST_NETWORK_ID` | Network UUID for builds | `b5fcd86e-efac-4997-b8bc-...` |
-| `TAILSCALE_AUTH_KEY` | Tailscale auth key with tag:ci permission | `tskey-auth-...` |
+| Secret                  | Description                               | Example                         |
+| ----------------------- | ----------------------------------------- | ------------------------------- |
+| `CLOUD_ENV_JSON_B64`    | Base64-encoded cloud environment JSON     | See format below                |
+| `VEXXHOST_AUTH_URL`     | OpenStack auth URL                        | `https://auth.vexxhost.net/v3/` |
+| `VEXXHOST_PROJECT_ID`   | Project/Tenant UUID                       | `61975f2c-7c17-4d69-82fa-...`   |
+| `VEXXHOST_USERNAME`     | OpenStack username                        | `user@example.com`              |
+| `VEXXHOST_PASSWORD_B64` | Base64-encoded password                   | `base64-encoded-password`       |
+| `VEXXHOST_NETWORK_ID`   | Network UUID for builds                   | `b5fcd86e-efac-4997-b8bc-...`   |
+| `TAILSCALE_AUTH_KEY`    | Tailscale auth key with tag:ci permission | `tskey-auth-...`                |
 
 ### 3. Cloud Environment JSON Format
 
@@ -95,6 +97,7 @@ Create a `cloud-env.json` file:
 ```
 
 Encode it:
+
 ```bash
 cat cloud-env.json | base64 -w 0 > cloud-env-b64.txt
 ```
@@ -126,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build ${{ inputs.image_type }} Image
         uses: lfit/packer-vexxhost-bastion-action@v1
         with:
@@ -145,16 +148,19 @@ jobs:
 ## Input Configuration Methods
 
 ### Method 1: Pass Files as Base64-Encoded Inputs (Recommended)
+
 - Store cloud-env.json and clouds.yaml as base64-encoded secrets
 - Action decodes them at runtime
 - Most secure, no files in repository
 
 ### Method 2: Files in Repository
+
 - Store templates and vars in the calling repository
 - Reference them via `packer_template` and `packer_vars_file` inputs
 - Credentials still come from secrets
 
 ### Method 3: Hybrid (Best Practice)
+
 - Templates and vars in calling repository (version controlled)
 - Credentials as base64-encoded secrets (secure)
 - This is what the example demonstrates
@@ -194,6 +200,7 @@ The action provides outputs that can be used in subsequent steps:
 ## Development and Testing
 
 ### Testing the Action Locally
+
 Use the included workflow in this repository:
 
 ```bash
@@ -201,6 +208,7 @@ gh workflow run packer-vexxhost-bastion-build.yaml
 ```
 
 ### Testing from Another Repository
+
 1. Push changes to this repository
 2. In caller repository, reference the action:
    ```yaml
@@ -209,6 +217,7 @@ gh workflow run packer-vexxhost-bastion-build.yaml
 3. Run the workflow in caller repository
 
 ### Versioning
+
 - Development: Use `@main`
 - Production: Create tags (`@v1`, `@v1.0.0`)
 
@@ -242,6 +251,7 @@ If you have an existing repository using the standalone workflow:
 ## Support
 
 For issues or questions:
+
 - File an issue in this repository
 - See ACTION_README.md for usage documentation
 - Check examples/ directory for working examples

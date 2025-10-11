@@ -72,14 +72,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ inputs.GERRIT_BRANCH }}
           submodules: true
-      
+
       - name: Update submodules
         run: git submodule update --init
-      
+
       - name: Build Packer Image
         uses: lfit/packer-vexxhost-bastion-action@v1
         with:
@@ -88,11 +88,11 @@ jobs:
           packer_vars_file: "common-packer/vars/${{ inputs.platform }}.pkrvars.hcl"
           packer_working_dir: "packer"
           packer_version: "1.11.2"
-          
+
           # Cloud configuration
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
           clouds_yaml: ${{ secrets.CLOUDS_YAML_B64 }}
-          
+
           # VexxHost credentials
           vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
           vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
@@ -100,19 +100,19 @@ jobs:
           vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
           vexxhost_region: ${{ secrets.VEXXHOST_REGION || 'ca-ymq-1' }}
           vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          
+
           # Bastion configuration
           bastion_flavor: "v3-standard-2"
           bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
           bastion_network: "odlci"
-          
+
           # Tailscale
           tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
-          
+
           # Build options
           debug_mode: "false"
           upload_logs: "true"
-      
+
       - name: Report build status
         if: always()
         run: |

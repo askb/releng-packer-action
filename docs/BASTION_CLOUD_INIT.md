@@ -25,6 +25,7 @@ timezone: UTC
 ### Package Installation
 
 Essential packages installed:
+
 - **Utilities:** curl, wget, jq, unzip, git
 - **Network tools:** netcat, net-tools, iputils-ping, traceroute
 - **Security:** apt-transport-https, ca-certificates, gnupg
@@ -35,6 +36,7 @@ Essential packages installed:
 #### Sysctl Configuration (`/etc/sysctl.d/99-tailscale.conf`)
 
 Enables IP forwarding for network routing:
+
 ```
 net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1
@@ -46,6 +48,7 @@ Required for Tailscale to function as a bastion/jump host.
 #### Bastion Initialization Script (`/usr/local/bin/bastion-init.sh`)
 
 Main initialization script that:
+
 1. Waits for network connectivity
 2. Installs Tailscale
 3. Authenticates with Tailscale network
@@ -95,10 +98,10 @@ runcmd:
 
 The cloud-init script expects these variables to be substituted:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `${BASTION_HOSTNAME}` | Unique hostname for bastion | `bastion-gh-12345` |
-| `${TAILSCALE_AUTH_KEY}` | Tailscale auth key | `tskey-auth-...` |
+| Variable                | Description                 | Example            |
+| ----------------------- | --------------------------- | ------------------ |
+| `${BASTION_HOSTNAME}`   | Unique hostname for bastion | `bastion-gh-12345` |
+| `${TAILSCALE_AUTH_KEY}` | Tailscale auth key          | `tskey-auth-...`   |
 
 These are substituted by the workflow before instance creation.
 
@@ -160,6 +163,7 @@ tailscale up \
 ```
 
 Options:
+
 - `--authkey`: Pre-authorized reusable key
 - `--hostname`: Unique identifier
 - `--advertise-tags`: Tag as bastion for ACLs
@@ -170,6 +174,7 @@ Options:
 ### Network Features
 
 With IP forwarding enabled, the bastion can:
+
 - Route traffic to VexxHost internal network
 - Act as SSH jump host for Packer builds
 - Forward connections to build target instances
@@ -207,6 +212,7 @@ ssh root@<bastion-ip> tailscale ip -4
 **Symptom:** Script waiting indefinitely for network
 
 **Solution:** Check VexxHost network configuration
+
 ```bash
 openstack server show bastion-gh-12345 | grep network
 ```
@@ -216,6 +222,7 @@ openstack server show bastion-gh-12345 | grep network
 **Symptom:** Tailscale not found after init
 
 **Solution:** Check installation logs
+
 ```bash
 ssh root@<bastion-ip> "journalctl -u tailscaled"
 ```
@@ -224,7 +231,8 @@ ssh root@<bastion-ip> "journalctl -u tailscaled"
 
 **Symptom:** Tailscale fails to authenticate
 
-**Solution:** 
+**Solution:**
+
 - Verify auth key is not expired
 - Check key is reusable and pre-authorized
 - Regenerate key in Tailscale admin
@@ -234,6 +242,7 @@ ssh root@<bastion-ip> "journalctl -u tailscaled"
 ### Adding Additional Packages
 
 Edit `packages` section:
+
 ```yaml
 packages:
   - curl
@@ -243,17 +252,19 @@ packages:
 ### Adding Additional Configuration
 
 Add to `write_files` section:
+
 ```yaml
 write_files:
   - path: /etc/your-config
     content: |
       your configuration here
-    permissions: '0644'
+    permissions: "0644"
 ```
 
 ### Adding Post-Install Commands
 
 Add to `runcmd` section:
+
 ```yaml
 runcmd:
   - your-command-here
@@ -354,6 +365,7 @@ openstack server delete test-bastion
 ## Change Log
 
 ### Version 1.0 (Current)
+
 - Initial cloud-init configuration
 - Tailscale integration
 - Network forwarding setup
