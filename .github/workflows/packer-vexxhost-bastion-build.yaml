@@ -83,13 +83,13 @@ jobs:
         id: find-packer
         run: |
           if [ -d "packer" ]; then
-            echo "packer-path=packer" >> $GITHUB_OUTPUT
+            echo "packer-path=packer" >> "$GITHUB_OUTPUT"
           elif [ -d "common-packer" ]; then
-            echo "packer-path=common-packer" >> $GITHUB_OUTPUT
+            echo "packer-path=common-packer" >> "$GITHUB_OUTPUT"
           elif [ -d "examples" ]; then
-            echo "packer-path=examples" >> $GITHUB_OUTPUT
+            echo "packer-path=examples" >> "$GITHUB_OUTPUT"
           else
-            echo "packer-path=." >> $GITHUB_OUTPUT
+            echo "packer-path=." >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check for changes
@@ -169,15 +169,15 @@ jobs:
             echo "⚠️  Using plain password (consider using VEXXHOST_PASSWORD_B64)"
           fi
 
-          echo "OS_AUTH_URL=${OS_AUTH_URL}" >> $GITHUB_ENV
-          echo "OS_PROJECT_ID=${OS_PROJECT_ID}" >> $GITHUB_ENV
-          echo "OS_PROJECT_NAME=${OS_PROJECT_NAME}" >> $GITHUB_ENV
-          echo "OS_USERNAME=${OS_USERNAME}" >> $GITHUB_ENV
-          echo "OS_PASSWORD=${OS_PASSWORD}" >> $GITHUB_ENV
-          echo "OS_REGION_NAME=${OS_REGION_NAME}" >> $GITHUB_ENV
-          echo "OS_IDENTITY_API_VERSION=${OS_IDENTITY_API_VERSION}" >> $GITHUB_ENV
-          echo "OS_USER_DOMAIN_NAME=${OS_USER_DOMAIN_NAME}" >> $GITHUB_ENV
-          echo "OS_PROJECT_DOMAIN_NAME=${OS_PROJECT_DOMAIN_NAME}" >> $GITHUB_ENV
+          echo "OS_AUTH_URL=${OS_AUTH_URL}" >> "$GITHUB_ENV"
+          echo "OS_PROJECT_ID=${OS_PROJECT_ID}" >> "$GITHUB_ENV"
+          echo "OS_PROJECT_NAME=${OS_PROJECT_NAME}" >> "$GITHUB_ENV"
+          echo "OS_USERNAME=${OS_USERNAME}" >> "$GITHUB_ENV"
+          echo "OS_PASSWORD=${OS_PASSWORD}" >> "$GITHUB_ENV"
+          echo "OS_REGION_NAME=${OS_REGION_NAME}" >> "$GITHUB_ENV"
+          echo "OS_IDENTITY_API_VERSION=${OS_IDENTITY_API_VERSION}" >> "$GITHUB_ENV"
+          echo "OS_USER_DOMAIN_NAME=${OS_USER_DOMAIN_NAME}" >> "$GITHUB_ENV"
+          echo "OS_PROJECT_DOMAIN_NAME=${OS_PROJECT_DOMAIN_NAME}" >> "$GITHUB_ENV"
 
       - name: Test OpenStack connection
         run: |
@@ -323,7 +323,7 @@ jobs:
           CMD="$CMD '${{ env.BASTION_NAME }}'"
 
           echo "Running: $CMD"
-          eval $CMD
+          eval "$CMD"
 
           echo "✅ Bastion instance created"
 
@@ -340,22 +340,22 @@ jobs:
           ELAPSED=0
           INTERVAL=10
 
-          while [ $ELAPSED -lt $TIMEOUT ]; do
+          while [ "$ELAPSED" -lt $TIMEOUT ]; do
             if sudo tailscale status | grep -q "${{ env.BASTION_NAME }}"; then
               BASTION_IP=$(sudo tailscale status | grep "${{ env.BASTION_NAME }}" | awk '{print $1}')
-              echo "BASTION_IP=${BASTION_IP}" >> $GITHUB_ENV
+              echo "BASTION_IP=${BASTION_IP}" >> "$GITHUB_ENV"
               echo "✅ Bastion joined Tailscale at IP: ${BASTION_IP}"
 
               # Wait for bastion initialization to complete
               echo "Waiting for bastion initialization..."
               for i in {1..24}; do
                 if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-                   root@${BASTION_IP} "test -f /tmp/bastion-ready" 2>/dev/null; then
+                   root@"${BASTION_IP}" "test -f /tmp/bastion-ready" 2>/dev/null; then
                   echo "✅ Bastion initialization complete (ready marker found)"
 
                   # Display bastion status
                   echo "Bastion status:"
-                  ssh -o StrictHostKeyChecking=no root@${BASTION_IP} \
+                  ssh -o StrictHostKeyChecking=no root@"${BASTION_IP}" \
                     "cat /var/log/bastion-init.log | tail -20" || true
 
                   exit 0
@@ -366,7 +366,7 @@ jobs:
 
               echo "⚠️ Bastion reachable but ready marker not found, proceeding anyway..."
               echo "Checking bastion logs:"
-              ssh -o StrictHostKeyChecking=no root@${BASTION_IP} \
+              ssh -o StrictHostKeyChecking=no root@"${BASTION_IP}" \
                 "cat /var/log/bastion-init.log 2>/dev/null || echo 'Log not available'" || true
               exit 0
             fi
@@ -472,8 +472,8 @@ jobs:
         run: |
           # Start SSH agent and make it available for Packer
           eval "$(ssh-agent -s)"
-          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
           echo "✅ SSH agent started for Tailscale SSH"
 
       - name: Validate Packer templates
@@ -695,17 +695,17 @@ jobs:
     steps:
       - name: Build summary
         run: |
-          echo "## Packer Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Bastion:** ${{ env.BASTION_NAME }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Packer Build Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Workflow:** ${{ github.workflow }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Run ID:** ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Trigger:** ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch:** ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Bastion:** ${{ env.BASTION_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ "${{ needs.packer-build-vexxhost.result }}" == "success" ]; then
-            echo "✅ **Build Status:** Success" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Build Status:** Success" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ **Build Status:** Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Build Status:** Failed" >> "$GITHUB_STEP_SUMMARY"
           fi
