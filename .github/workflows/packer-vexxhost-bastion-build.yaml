@@ -124,17 +124,22 @@ jobs:
       # Step 1: Setup Tailscale VPN
       # ========================================
       - name: Setup Tailscale VPN
-        uses: tailscale/github-action@v2
+        uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92 # v2.0.3 pinned
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
           hostname: github-runner-${{ github.run_id }}
+          args: up --ssh --accept-routes --accept-dns=false --verbose=1
 
-      - name: Verify Tailscale connection
+      - name: Capture initial Tailscale status
         run: |
-          echo "✅ Tailscale status:"
-          sudo tailscale status
+          echo "✅ Tailscale status (initial):"
+          sudo tailscale status || true
+          sudo tailscale ip -4 | head -1 | sed 's/^/Runner TS IPv4: /'
+          sudo tailscale ip -6 | head -1 | sed 's/^/Runner TS IPv6: /'
+          mkdir -p logs
+          sudo tailscale status > logs/tailscale-initial-status.txt 2>&1 || true
 
       # ========================================
       # Step 2: Setup OpenStack CLI
@@ -346,23 +351,23 @@ jobs:
           INTERVAL=10
 
           while [ "$ELAPSED" -lt $TIMEOUT ]; do
-            if sudo tailscale status | grep -q "${{ env.BASTION_NAME }}"; then
-              BASTION_IP=$(sudo tailscale status | grep "${{ env.BASTION_NAME }}" | awk '{print $1}')
+            LINE=$(sudo tailscale status --json 2>/dev/null | jq -r --arg NAME "${{ env.BASTION_NAME }}" '.Peer | to_entries[] | select(.value.HostName==$NAME) | .value.TailscaleIPs[0]' || true)
+            if [ -n "$LINE" ] && [ "$LINE" != "null" ]; then
+              BASTION_IP="$LINE"
               echo "BASTION_IP=${BASTION_IP}" >> "$GITHUB_ENV"
               echo "✅ Bastion joined Tailscale at IP: ${BASTION_IP}"
 
-              # Wait for bastion initialization to complete
+              # Capture status snapshot
+              mkdir -p logs
+              sudo tailscale status > logs/tailscale-after-bastion.txt 2>&1 || true
+
               echo "Waiting for bastion initialization..."
               for i in {1..24}; do
                 if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
                    root@"${BASTION_IP}" "test -f /tmp/bastion-ready" 2>/dev/null; then
                   echo "✅ Bastion initialization complete (ready marker found)"
-
-                  # Display bastion status
-                  echo "Bastion status:"
                   ssh -o StrictHostKeyChecking=no root@"${BASTION_IP}" \
-                    "cat /var/log/bastion-init.log | tail -20" || true
-
+                    "tail -40 /var/log/bastion-init.log" || true
                   exit 0
                 fi
                 echo "Waiting for bastion ready marker... (attempt $i/24)"
@@ -370,9 +375,8 @@ jobs:
               done
 
               echo "⚠️ Bastion reachable but ready marker not found, proceeding anyway..."
-              echo "Checking bastion logs:"
               ssh -o StrictHostKeyChecking=no root@"${BASTION_IP}" \
-                "cat /var/log/bastion-init.log 2>/dev/null || echo 'Log not available'" || true
+                "sed -n '1,120p' /var/log/bastion-init.log 2>/dev/null || echo 'Log not available'" || true
               exit 0
             fi
 
@@ -382,12 +386,9 @@ jobs:
           done
 
           echo "❌ Timeout waiting for bastion to join Tailscale"
-          echo "Checking Tailscale status:"
-          sudo tailscale status
-          echo "Checking OpenStack instance status:"
-          openstack server show "${{ env.BASTION_NAME }}"
-          echo "Checking console log (last 100 lines):"
-          openstack console log show "${{ env.BASTION_NAME }}" --lines 100
+          sudo tailscale status || true
+          openstack server show "${{ env.BASTION_NAME }}" || true
+          openstack console log show "${{ env.BASTION_NAME }}" --lines 100 || true
           exit 1
 
       # ========================================
@@ -626,20 +627,25 @@ jobs:
             build-logs/
           retention-days: 30
 
+      - name: Capture bastion IP & status (runner)
+        if: env.BASTION_IP == ''
+        run: |
+          # Fallback: record current runner tailscale IPs
+          mkdir -p logs
+          sudo tailscale ip -4 | head -1 | sed 's/^/Runner TS IPv4: /'
+          sudo tailscale ip -6 | head -1 | sed 's/^/Runner TS IPv6: /'
+          sudo tailscale status > logs/tailscale-pre-upload.txt 2>&1 || true
+
       - name: Upload bastion logs
         if: always() && env.BASTION_IP != ''
         continue-on-error: true
         run: |
           mkdir -p bastion-logs
-
-          # Try to fetch cloud-init logs from bastion
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            root@${{ env.BASTION_IP }} \
-            "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log || true
-
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            root@${{ env.BASTION_IP }} \
-            "cloud-init status --long" > bastion-logs/cloud-init-status.log || true
+          ssh_opts='-o StrictHostKeyChecking=no -o ConnectTimeout=10'
+          ssh $ssh_opts root@${{ env.BASTION_IP }} "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log 2>&1 || true
+          ssh $ssh_opts root@${{ env.BASTION_IP }} "cloud-init status --long" > bastion-logs/cloud-init-status.log 2>&1 || true
+          ssh $ssh_opts root@${{ env.BASTION_IP }} "tail -120 /var/log/bastion-init.log" > bastion-logs/bastion-init-tail.log 2>&1 || true
+          sudo tailscale status > bastion-logs/runner-tailscale-status.txt 2>&1 || true
 
       - name: Upload bastion diagnostics
         uses: actions/upload-artifact@v4
