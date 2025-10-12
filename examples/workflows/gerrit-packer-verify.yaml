@@ -80,7 +80,7 @@ jobs:
           submodules: "true" # Important: checkout common-packer submodule
 
       - name: Update submodules
-        run: git submodule update --init
+        run: git submodule update --init --recursive
 
       - name: Check for packer changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
@@ -91,16 +91,26 @@ jobs:
           filters: |
             src:
               - 'packer/**'
+              - 'common-packer/**'
+              - 'examples/**'
+              - 'templates/**'
+              - 'vars/**'
+              - 'provision/**'
 
-      - name: Validate Packer Templates
+      - name: Validate ALL Packer template + varfile combinations
         if: steps.changes.outputs.src == 'true'
-        uses: lfit/packer-vexxhost-bastion-action@v1
+        uses: askb/releng-packer-action@main
         with:
           mode: validate
-          packer_template: "templates/builder.pkr.hcl"
-          packer_vars_file: "common-packer/vars/ubuntu-22.04.pkrvars.hcl"
-          packer_working_dir: "packer"
+          packer_working_dir: "."
           packer_version: "1.11.2"
+          # Optional: provide vexxhost credentials for validation
+          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
+          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
+          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
+          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD }}
+          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          # No packer_template or packer_vars_file needed - validates ALL combinations
           # No bastion/Tailscale inputs needed for validate mode
 
   vote:
