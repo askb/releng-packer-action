@@ -22,7 +22,8 @@ def test_workflow_yaml_valid(workflow_file):
 
     assert workflow_config is not None
     assert "name" in workflow_config
-    assert "on" in workflow_config
+    # 'on' gets parsed as boolean True by YAML
+    assert ("on" in workflow_config or True in workflow_config)
     assert "jobs" in workflow_config
 
 
