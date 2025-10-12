@@ -132,6 +132,9 @@ jobs:
           hostname: github-runner-${{ github.run_id }}
           args: up --ssh --accept-routes --accept-dns=false --verbose=1
 
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Capture initial Tailscale status
         run: |
           echo "✅ Tailscale status (initial):"
@@ -139,6 +142,7 @@ jobs:
           sudo tailscale ip -4 | head -1 | sed 's/^/Runner TS IPv4: /'
           sudo tailscale ip -6 | head -1 | sed 's/^/Runner TS IPv6: /'
           mkdir -p logs
+          sudo tailscale status --json > logs/tailscale-initial-status.json 2>/dev/null || true
           sudo tailscale status > logs/tailscale-initial-status.txt 2>&1 || true
 
       # ========================================
