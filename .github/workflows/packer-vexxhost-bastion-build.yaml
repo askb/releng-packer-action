@@ -124,13 +124,13 @@ jobs:
       # Step 1: Setup Tailscale VPN
       # ========================================
       - name: Setup Tailscale VPN
-        uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92 # v2.0.3 pinned
+        uses: tailscale/github-action@v2
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
           hostname: github-runner-${{ github.run_id }}
-          args: up --ssh --accept-routes --accept-dns=false --verbose=1
+          args: --ssh --accept-routes --accept-dns=false
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
