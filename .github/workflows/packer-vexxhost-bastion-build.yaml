@@ -96,6 +96,8 @@ jobs:
         uses: dorny/paths-filter@v3
         id: check
         with:
+          # For workflow_dispatch, compare against previous commit
+          base: ${{ github.event.before || format('refs/heads/{0}', github.ref_name) }}
           filters: |
             has-changes:
               - 'packer/**'
@@ -124,7 +126,8 @@ jobs:
       - name: Setup Tailscale VPN
         uses: tailscale/github-action@v2
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci
           hostname: github-runner-${{ github.run_id }}
 

@@ -56,7 +56,8 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed architecture and
    - ✅ **Reusable** (use for multiple workflows)
    - ✅ **Pre-authorized** (no approval needed)
    - **Tags:** `tag:bastion`
-4. Copy the key → `TAILSCALE_AUTH_KEY`
+4. **Recommended**: Create OAuth client (see [docs/TAILSCALE_SETUP.md](docs/TAILSCALE_SETUP.md))
+   - Or legacy: Copy the auth key → `TAILSCALE_AUTH_KEY`
 
 ### 2. Get VexxHost Credentials
 

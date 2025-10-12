@@ -224,7 +224,7 @@ Once a build runs:
    openstack console log show bastion-gh-XXXXXX
    ```
 2. Look for Tailscale installation errors
-3. Verify `TAILSCALE_AUTH_KEY` secret is set correctly
+3. Verify `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_SECRET` secrets are set correctly (or `TAILSCALE_AUTH_KEY` for legacy setup)
 4. Check network connectivity from VexxHost to Tailscale servers
 
 ## Security Considerations
