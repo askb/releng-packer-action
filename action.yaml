@@ -128,6 +128,8 @@ runs:
     # ========================================
     - name: Setup Tailscale VPN
       if: inputs.mode == 'build'
+      env:
+        TS_DEBUG: "1"
       uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92 # v2.0.3
       with:
         authkey: ${{ inputs.tailscale_auth_key }}
