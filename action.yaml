@@ -503,9 +503,9 @@ runs:
           echo "Varfile: $EXPLICIT_VARFILE"
 
           if validate_template "$EXPLICIT_VARFILE" "$EXPLICIT_TEMPLATE"; then
-            ((validation_count++))
+            ((validation_count++)) || true
           else
-            ((failed_count++))
+            ((failed_count++)) || true
           fi
         else
           echo "======================================"
@@ -555,9 +555,9 @@ runs:
               fi
 
               if validate_template "$varfile" "$template"; then
-                ((validation_count++))
+                ((validation_count++)) || true
               else
-                ((failed_count++))
+                ((failed_count++)) || true
               fi
             done
             echo "::endgroup::"
