@@ -445,6 +445,7 @@ runs:
         cloud_password      = "validation-pass"
         cloud_region        = "RegionOne"
         cloud_network       = "validation-network"
+        cloud_domain_name   = "default"
         EOF
         fi
 
