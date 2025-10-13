@@ -15,15 +15,19 @@ inputs:
 
   # Packer Configuration
   packer_template:
-    description: "Path to Packer template file (relative to packer_working_dir) - ignored in validate mode which validates all templates"
+    description: "Path to Packer template file (relative to packer_working_dir) - if empty, auto-discovers all templates in validate mode"
     required: false
     default: ""
   packer_vars_file:
-    description: "Path to Packer variables file (relative to packer_working_dir) - ignored in validate mode which validates all varfiles"
+    description: "Path to Packer variables file (relative to packer_working_dir) - if empty, auto-discovers all varfiles in validate mode"
     required: false
     default: ""
   packer_working_dir:
     description: "Working directory containing Packer files (will search for packer/ or common-packer/ subdirectory)"
+    required: false
+    default: "."
+  path_prefix:
+    description: "Directory path prefix for executing the action (prevents overwriting the caller's workspace)"
     required: false
     default: "."
   packer_version:
@@ -139,6 +143,34 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # ========================================
+    # Step 0: Setup and validate path_prefix
+    # ========================================
+    - name: Setup working directory and validate path_prefix
+      shell: bash
+      run: |
+        path_prefix="${{ inputs.path_prefix }}"
+
+        # Validate path_prefix is not empty
+        if [[ -z "$path_prefix" ]]; then
+          echo "Error: path_prefix cannot be empty" >&2
+          exit 1
+        fi
+
+        # Check for dangerous characters or paths
+        if [[ "$path_prefix" =~ \.\./|^\.\.$|/\.\./|/\.\.$|^\.\.|^/ ]]; then
+          echo "Error: path_prefix cannot contain '..' (parent directory references) or start with '/' (absolute paths)" >&2
+          exit 1
+        fi
+
+        # Create the directory if it doesn't exist and it's not the default
+        if [[ "$path_prefix" != "." && ! -d "$path_prefix" ]]; then
+          echo "Creating directory: $path_prefix" >&2
+          mkdir -p "$path_prefix"
+        fi
+
+        echo "Path prefix validation and setup completed: $path_prefix" >&2
+
     # ========================================
     # Step 1: Setup Tailscale VPN (Build Mode Only)
     # ========================================
@@ -378,6 +410,7 @@ runs:
       if: inputs.mode == 'validate'
       id: packer-validate
       shell: bash
+      working-directory: ${{ inputs.path_prefix }}
       env:
         OS_CLOUD: ${{ inputs.os_cloud }}
       run: |
@@ -385,86 +418,131 @@ runs:
 
         cd "$PACKER_DIR"
 
-        # Find all varfiles and templates
-        varfiles=(vars/*.pkrvars.hcl)
-        if [ -d "common-packer/vars" ]; then
-          varfiles=(common-packer/vars/*.pkrvars.hcl)
-        fi
+        # Determine validation mode: auto-discovery or explicit paths
+        EXPLICIT_TEMPLATE="${{ inputs.packer_template }}"
+        EXPLICIT_VARFILE="${{ inputs.packer_vars_file }}"
 
-        templates=(templates/*.pkr.hcl)
+        validation_count=0
+        failed_count=0
 
         # Create logs directory
         mkdir -p "${{ github.workspace }}/logs"
         PACKER_LOGS_DIR="${{ github.workspace }}/logs"
 
-        validation_count=0
-        failed_count=0
+        # Function to validate a template with a varfile
+        validate_template() {
+          local varfile="$1"
+          local template="$2"
 
-        # Loop through each varfile
-        for varfile in "${varfiles[@]}"; do
-          # Skip cloud-env and non-existent files
-          if [[ "$varfile" == *"cloud-env"* ]] || \
-             [[ "$varfile" == *"vars/*.pkrvars.hcl" ]] || \
-             [[ "$varfile" == *"common-packer/vars/*.pkrvars.hcl" ]]; then
-            echo "Skipping $varfile"
-            continue
+          echo "  → Validating: $template with $varfile"
+
+          # Initialize template if needed
+          if [[ "${template#*.}" == "pkr.hcl" ]]; then
+            echo "    Initializing template..."
+            if ! packer init "$template" 2>&1; then
+              echo "    ❌ Failed to initialize $template"
+              return 1
+            fi
           fi
 
-          echo "::group::Validating with $varfile"
+          # Set up logging
+          LOG_FILE="packer-validate-${varfile##*/}-${template##*/}.log"
+          export PACKER_LOG="yes"
+          export PACKER_LOG_PATH="$PACKER_LOGS_DIR/$LOG_FILE"
+
+          # Build validation command
+          VALIDATE_CMD="packer validate"
+
+          # Add cloud-env if it exists
+          if [ -f "${{ github.workspace }}/cloud-env.pkrvars.hcl" ]; then
+            VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.pkrvars.hcl"
+          elif [ -f "${{ github.workspace }}/cloud-env.json" ]; then
+            VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.json"
+          fi
+
+          # Add varfile and template
+          VALIDATE_CMD="$VALIDATE_CMD -var-file=$varfile $template"
+
+          # Run validation
+          echo "    Running: $VALIDATE_CMD"
+          if output=$(eval "$VALIDATE_CMD" 2>&1); then
+            echo "    ✅ Validation passed"
+            return 0
+          else
+            echo "    ❌ Validation failed: $output"
+            return 1
+          fi
+        }
+
+        # Check if explicit paths are provided
+        if [[ -n "$EXPLICIT_TEMPLATE" && -n "$EXPLICIT_VARFILE" ]]; then
           echo "======================================"
-          echo "Testing varfile: $varfile"
+          echo "Validating explicit template"
+          echo "======================================"
+          echo "Template: $EXPLICIT_TEMPLATE"
+          echo "Varfile: $EXPLICIT_VARFILE"
+
+          if validate_template "$EXPLICIT_VARFILE" "$EXPLICIT_TEMPLATE"; then
+            ((validation_count++))
+          else
+            ((failed_count++))
+          fi
+        else
+          echo "======================================"
+          echo "Auto-discovering Packer files"
           echo "======================================"
 
-          # Loop through each template
-          for template in "${templates[@]}"; do
-            # Skip variables files and non-existent files
-            if [[ "$template" == *"variables"* ]] || \
-               [[ "$template" == *"templates/*.pkr.hcl" ]]; then
+          # Find all varfiles and templates
+          varfiles=()
+          if [ -d "vars" ]; then
+            while IFS= read -r -d '' file; do
+              varfiles+=("$file")
+            done < <(find vars -type f -name "*.pkrvars.hcl" -print0 2>/dev/null || true)
+          fi
+          if [ -d "common-packer/vars" ]; then
+            while IFS= read -r -d '' file; do
+              varfiles+=("$file")
+            done < <(find common-packer/vars -type f -name "*.pkrvars.hcl" -print0 2>/dev/null || true)
+          fi
+
+          templates=()
+          if [ -d "templates" ]; then
+            while IFS= read -r -d '' file; do
+              templates+=("$file")
+            done < <(find templates -type f -name "*.pkr.hcl" -print0 2>/dev/null || true)
+          fi
+
+          echo "Found ${#varfiles[@]} varfile(s) and ${#templates[@]} template(s)"
+
+          # Loop through each varfile
+          for varfile in "${varfiles[@]}"; do
+            # Skip cloud-env files
+            if [[ "$varfile" == *"cloud-env"* ]]; then
+              echo "Skipping $varfile (cloud-env)"
               continue
             fi
 
-            echo "  → Template: $template"
+            echo "::group::Validating with $varfile"
+            echo "======================================"
+            echo "Testing varfile: $varfile"
+            echo "======================================"
 
-            # Initialize template if needed
-            if [[ "${template#*.}" == "pkr.hcl" ]]; then
-              echo "    Initializing template..."
-              if ! packer init "$template"; then
-                echo "    ❌ Failed to initialize $template"
-                ((failed_count++))
+            # Loop through each template
+            for template in "${templates[@]}"; do
+              # Skip variables files
+              if [[ "$template" == *"variables"* ]]; then
                 continue
               fi
-            fi
 
-            # Set up logging
-            LOG_FILE="packer-validate-${varfile##*/}-${template##*/}.log"
-            export PACKER_LOG="yes"
-            export PACKER_LOG_PATH="$PACKER_LOGS_DIR/$LOG_FILE"
-
-            # Build validation command
-            VALIDATE_CMD="packer validate"
-
-            # Add cloud-env if it exists
-            if [ -f "${{ github.workspace }}/cloud-env.pkrvars.hcl" ]; then
-              VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.pkrvars.hcl"
-            elif [ -f "${{ github.workspace }}/cloud-env.json" ]; then
-              VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.json"
-            fi
-
-            # Add varfile and template
-            VALIDATE_CMD="$VALIDATE_CMD -var-file=$varfile $template"
-
-            # Run validation
-            echo "    Running: $VALIDATE_CMD"
-            if output=$(eval $VALIDATE_CMD 2>&1); then
-              echo "    ✅ Validation passed: $output"
-              ((validation_count++))
-            else
-              echo "    ❌ Validation failed: $output"
-              ((failed_count++))
-            fi
+              if validate_template "$varfile" "$template"; then
+                ((validation_count++))
+              else
+                ((failed_count++))
+              fi
+            done
+            echo "::endgroup::"
           done
-          echo "::endgroup::"
-        done
+        fi
 
         echo ""
         echo "======================================"
@@ -476,11 +554,11 @@ runs:
 
         # Set output
         if [ $failed_count -gt 0 ]; then
-          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "status=failure" >> "$GITHUB_OUTPUT"
           echo "❌ $failed_count validation(s) failed"
           exit 1
         else
-          echo "status=success" >> $GITHUB_OUTPUT
+          echo "status=success" >> "$GITHUB_OUTPUT"
           echo "✅ All $validation_count validations passed"
         fi
 
