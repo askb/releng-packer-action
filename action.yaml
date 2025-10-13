@@ -16,11 +16,11 @@ inputs:
   # Packer Configuration
   packer_template:
     description: "Path to Packer template file (relative to packer_working_dir) - if empty, auto-discovers all templates in validate mode"
-    required: true
+    required: false
     default: ""
   packer_vars_file:
     description: "Path to Packer variables file (relative to packer_working_dir) - if empty, auto-discovers all varfiles in validate mode"
-    required: true
+    required: false
     default: ""
   packer_working_dir:
     description: "Working directory containing Packer files (will search for packer/ or common-packer/ subdirectory)"

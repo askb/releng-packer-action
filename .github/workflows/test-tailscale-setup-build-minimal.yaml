@@ -142,8 +142,8 @@ jobs:
           sudo tailscale ip -4 | head -1 | sed 's/^/Runner TS IPv4: /'
           sudo tailscale ip -6 | head -1 | sed 's/^/Runner TS IPv6: /'
           mkdir -p logs
-          sudo tailscale status --json | sudo tee logs/tailscale-initial-status.json >/dev/null 2>&1 || true
-          sudo tailscale status | sudo tee logs/tailscale-initial-status.txt >/dev/null 2>&1 || true
+          sudo tailscale status --json | tee logs/tailscale-initial-status.json >/dev/null 2>&1 || true
+          sudo tailscale status | tee logs/tailscale-initial-status.txt >/dev/null 2>&1 || true
 
       # ========================================
       # Step 2: Setup OpenStack CLI
@@ -363,7 +363,7 @@ jobs:
 
               # Capture status snapshot
               mkdir -p logs
-              sudo tailscale status | sudo tee logs/tailscale-after-bastion.txt >/dev/null 2>&1 || true
+              sudo tailscale status | tee logs/tailscale-after-bastion.txt >/dev/null 2>&1 || true
 
               echo "Waiting for bastion initialization..."
               for i in {1..24}; do
@@ -638,18 +638,18 @@ jobs:
           mkdir -p logs
           sudo tailscale ip -4 | head -1 | sed 's/^/Runner TS IPv4: /'
           sudo tailscale ip -6 | head -1 | sed 's/^/Runner TS IPv6: /'
-          sudo tailscale status | sudo tee logs/tailscale-pre-upload.txt >/dev/null 2>&1 || true
+          sudo tailscale status | tee logs/tailscale-pre-upload.txt >/dev/null 2>&1 || true
 
       - name: Upload bastion logs
         if: always() && env.BASTION_IP != ''
         continue-on-error: true
         run: |
           mkdir -p bastion-logs
-          ssh_opts='-o StrictHostKeyChecking=no -o ConnectTimeout=10'
-          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log 2>&1 || true
-          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "cloud-init status --long" > bastion-logs/cloud-init-status.log 2>&1 || true
-          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "tail -120 /var/log/bastion-init.log" > bastion-logs/bastion-init-tail.log 2>&1 || true
-          sudo tailscale status | sudo tee bastion-logs/runner-tailscale-status.txt >/dev/null 2>&1 || true
+          SSH_OPTS='-o StrictHostKeyChecking=no -o ConnectTimeout=10'
+          ssh "${SSH_OPTS}" "root@${{ env.BASTION_IP }}" "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log 2>&1 || true
+          ssh "${SSH_OPTS}" "root@${{ env.BASTION_IP }}" "cloud-init status --long" > bastion-logs/cloud-init-status.log 2>&1 || true
+          ssh "${SSH_OPTS}" "root@${{ env.BASTION_IP }}" "tail -120 /var/log/bastion-init.log" > bastion-logs/bastion-init-tail.log 2>&1 || true
+          sudo tailscale status | tee bastion-logs/runner-tailscale-status.txt >/dev/null 2>&1 || true
 
       - name: Upload bastion diagnostics
         uses: actions/upload-artifact@v4
