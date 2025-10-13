@@ -98,18 +98,24 @@ inputs:
     default: "300"
 
   # Tailscale Configuration (required for build mode only)
-  tailscale_auth_key:
-    description: "Tailscale auth key for bastion (required for build mode if not using OAuth)"
-    required: false
-    default: ""
+  # OAuth is the recommended method - requires both client_id and secret
   tailscale_oauth_client_id:
-    description: "Tailscale OAuth client ID for runner (alternative to auth key)"
+    description: "Tailscale OAuth client ID (recommended - requires oauth_secret)"
     required: false
     default: ""
   tailscale_oauth_secret:
-    description: "Tailscale OAuth secret for runner (alternative to auth key)"
+    description: "Tailscale OAuth secret (recommended - requires oauth_client_id)"
     required: false
     default: ""
+  # Legacy auth key support - deprecated but still supported
+  tailscale_auth_key:
+    description: "Tailscale auth key (legacy - OAuth is recommended)"
+    required: false
+    default: ""
+  tailscale_tags:
+    description: "Comma-separated list of Tailscale tags (e.g., 'tag:ci,tag:bastion')"
+    required: false
+    default: "tag:ci"
   tailscale_version:
     description: "Tailscale version"
     required: false
@@ -180,15 +186,44 @@ runs:
     # ========================================
     # Step 1: Setup Tailscale VPN (Build Mode Only)
     # ========================================
-    - name: Setup Tailscale VPN
-      if: inputs.mode == 'build'
+    - name: Setup Tailscale VPN (OAuth)
+      if: inputs.mode == 'build' && inputs.tailscale_oauth_client_id != '' && inputs.tailscale_oauth_secret != ''
       uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3.3.0
       with:
-        oauth_client_id: ${{ inputs.tailscale_oauth_client_id }}
-        oauth_secret: ${{ inputs.tailscale_oauth_secret }}
+        oauth-client-id: ${{ inputs.tailscale_oauth_client_id }}
+        oauth-secret: ${{ inputs.tailscale_oauth_secret }}
+        version: ${{ inputs.tailscale_version }}
+        tags: ${{ inputs.tailscale_tags }}
+        hostname: github-runner-${{ github.run_id }}
+        args: --ssh --accept-routes --accept-dns=false
+
+    - name: Setup Tailscale VPN (Auth Key - Legacy)
+      if: inputs.mode == 'build' && (inputs.tailscale_oauth_client_id == '' || inputs.tailscale_oauth_secret == '') && inputs.tailscale_auth_key != ''
+      uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3.3.0
+      with:
+        authkey: ${{ inputs.tailscale_auth_key }}
         version: ${{ inputs.tailscale_version }}
         hostname: github-runner-${{ github.run_id }}
-        args: up --ssh --verbose=1
+        args: --ssh --accept-routes --accept-dns=false
+
+    - name: Validate Tailscale credentials
+      if: inputs.mode == 'build'
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.tailscale_oauth_client_id }}" ]] && [[ -z "${{ inputs.tailscale_auth_key }}" ]]; then
+          echo "❌ Error: Either tailscale_oauth_client_id+tailscale_oauth_secret OR tailscale_auth_key must be provided for build mode"
+          exit 1
+        fi
+
+        if [[ -n "${{ inputs.tailscale_oauth_client_id }}" ]] && [[ -z "${{ inputs.tailscale_oauth_secret }}" ]]; then
+          echo "❌ Error: tailscale_oauth_secret is required when tailscale_oauth_client_id is provided"
+          exit 1
+        fi
+
+        if [[ -n "${{ inputs.tailscale_oauth_secret }}" ]] && [[ -z "${{ inputs.tailscale_oauth_client_id }}" ]]; then
+          echo "❌ Error: tailscale_oauth_client_id is required when tailscale_oauth_secret is provided"
+          exit 1
+        fi
 
     - name: Verify Tailscale connection
       if: inputs.mode == 'build'
