@@ -1,8 +1,8 @@
 ---
 # SPDX-License-Identifier: Apache-2.0
-# Packer Build on VexxHost with Tailscale Bastion
+# Test Tailscale Setup and Minimal Build
 
-name: Packer Build with VexxHost Tailscale Bastion
+name: Test Tailscale Setup and Minimal Build
 
 # yamllint disable-line rule:truthy
 on:
