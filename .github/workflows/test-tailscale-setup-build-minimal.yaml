@@ -646,9 +646,9 @@ jobs:
         run: |
           mkdir -p bastion-logs
           ssh_opts='-o StrictHostKeyChecking=no -o ConnectTimeout=10'
-          ssh ${ssh_opts} root@"${{ env.BASTION_IP }}" "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log 2>&1 || true
-          ssh ${ssh_opts} root@"${{ env.BASTION_IP }}" "cloud-init status --long" > bastion-logs/cloud-init-status.log 2>&1 || true
-          ssh ${ssh_opts} root@"${{ env.BASTION_IP }}" "tail -120 /var/log/bastion-init.log" > bastion-logs/bastion-init-tail.log 2>&1 || true
+          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "cat /var/log/cloud-init-output.log" > bastion-logs/cloud-init-output.log 2>&1 || true
+          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "cloud-init status --long" > bastion-logs/cloud-init-status.log 2>&1 || true
+          ssh "${ssh_opts}" root@"${{ env.BASTION_IP }}" "tail -120 /var/log/bastion-init.log" > bastion-logs/bastion-init-tail.log 2>&1 || true
           sudo tailscale status | sudo tee bastion-logs/runner-tailscale-status.txt >/dev/null 2>&1 || true
 
       - name: Upload bastion diagnostics
