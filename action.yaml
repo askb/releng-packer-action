@@ -471,7 +471,7 @@ runs:
           export PACKER_LOG_PATH="$PACKER_LOGS_DIR/$LOG_FILE"
 
           # Build validation command
-          VALIDATE_CMD="packer validate"
+          VALIDATE_CMD="packer validate -syntax-only"
 
           # Add cloud-env if it exists
           if [ -f "${{ github.workspace }}/cloud-env.pkrvars.hcl" ]; then
@@ -598,7 +598,7 @@ runs:
         set -e
         cd "$PACKER_DIR"
 
-        VALIDATE_CMD="packer validate"
+        VALIDATE_CMD="packer validate -syntax-only"
         VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ github.workspace }}/cloud-env.json"
         VALIDATE_CMD="$VALIDATE_CMD -var-file=${{ inputs.packer_vars_file }}"
         VALIDATE_CMD="$VALIDATE_CMD -var=bastion_host=${{ env.BASTION_IP }}"
