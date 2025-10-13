@@ -100,7 +100,7 @@ jobs:
 
       - name: Validate Packer templates
         if: steps.changes.outputs.src == 'true'
-        uses: ./
+        uses: askb/releng-packer-action@main # latest
         with:
           mode: validate
           packer_working_dir: "packer"

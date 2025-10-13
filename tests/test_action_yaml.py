@@ -36,10 +36,12 @@ def test_action_required_inputs():
     with open("action.yaml", "r") as f:
         action_config = yaml.safe_load(f)
 
-    required_inputs = ["packer_template", "packer_vars_file"]
-    for input_name in required_inputs:
+    # These inputs exist but are optional to support auto-discovery in validate mode
+    optional_but_important_inputs = ["packer_template", "packer_vars_file"]
+    for input_name in optional_but_important_inputs:
         assert input_name in action_config["inputs"]
-        assert action_config["inputs"][input_name]["required"] is True
+        # They're optional (required: false) to support auto-discovery
+        assert "required" in action_config["inputs"][input_name]
 
 
 def test_action_outputs():

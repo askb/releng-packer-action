@@ -5,7 +5,7 @@
 # 1. Changes are merged from Gerrit (workflow_dispatch)
 # 2. Monthly scheduled builds (1st of every month)
 
-name: Gerrit Packer Merge (Build)
+name: Gerrit Packer Merge
 
 # yamllint disable-line rule:truthy
 on:
@@ -269,7 +269,7 @@ jobs:
 
       - name: Build Packer Image
         id: build
-        uses: ./
+        uses: askb/releng-packer-action@main # latest
         with:
           mode: build
           packer_template: "packer/templates/${{ matrix.template }}.pkr.hcl"
