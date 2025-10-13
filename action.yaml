@@ -164,9 +164,15 @@ runs:
         fi
 
         # Create the directory if it doesn't exist and it's not the default
-        if [[ "$path_prefix" != "." && ! -d "$path_prefix" ]]; then
+        if [[ "$path_prefix" != "." && ! -d "${{ github.workspace }}/$path_prefix" ]]; then
           echo "Creating directory: $path_prefix" >&2
-          mkdir -p "$path_prefix"
+          mkdir -p "${{ github.workspace }}/$path_prefix"
+        fi
+
+        # Copy packer_working_dir contents to path_prefix if not using default
+        if [[ "$path_prefix" != "." && -d "${{ inputs.packer_working_dir }}" ]]; then
+          echo "Copying ${{ inputs.packer_working_dir }} to $path_prefix/" >&2
+          cp -r "${{ inputs.packer_working_dir }}" "${{ github.workspace }}/$path_prefix/"
         fi
 
         echo "Path prefix validation and setup completed: $path_prefix" >&2
