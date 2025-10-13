@@ -24,7 +24,12 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
 {
   "tagOwners": {
     "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
-    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci", "tag:bastion"]
+    "tag:bastion": [
+      "autogroup:admin",
+      "autogroup:owner",
+      "tag:ci",
+      "tag:bastion"
+    ]
   },
 
   "acls": [
@@ -152,15 +157,15 @@ You have two options for authenticating GitHub Actions with Tailscale: **OAuth c
 
 #### Comparison Table
 
-| Feature | OAuth Client (Recommended) | Auth Key |
-|---------|---------------------------|----------|
-| **Security** | ✅ Better - scoped tokens, automatic rotation | ⚠️ Good - static keys require manual rotation |
-| **Audit Trail** | ✅ Detailed OAuth audit logs | ⚠️ Basic key usage logs |
-| **Key Rotation** | ✅ Automatic (tokens expire quickly) | ❌ Manual rotation required |
-| **Setup Complexity** | Medium - requires tag self-ownership config | Easy - straightforward key generation |
-| **Best For** | Production CI/CD pipelines | Quick testing, simple setups |
-| **Expiration** | Short-lived tokens (hours) | Can be set to never expire |
-| **Compromise Risk** | ✅ Lower - tokens auto-expire | ⚠️ Higher - long-lived credentials |
+| Feature              | OAuth Client (Recommended)                    | Auth Key                                      |
+| -------------------- | --------------------------------------------- | --------------------------------------------- |
+| **Security**         | ✅ Better - scoped tokens, automatic rotation | ⚠️ Good - static keys require manual rotation |
+| **Audit Trail**      | ✅ Detailed OAuth audit logs                  | ⚠️ Basic key usage logs                       |
+| **Key Rotation**     | ✅ Automatic (tokens expire quickly)          | ❌ Manual rotation required                   |
+| **Setup Complexity** | Medium - requires tag self-ownership config   | Easy - straightforward key generation         |
+| **Best For**         | Production CI/CD pipelines                    | Quick testing, simple setups                  |
+| **Expiration**       | Short-lived tokens (hours)                    | Can be set to never expire                    |
+| **Compromise Risk**  | ✅ Lower - tokens auto-expire                 | ⚠️ Higher - long-lived credentials            |
 
 ---
 
@@ -171,6 +176,7 @@ OAuth clients provide better security and are recommended for production CI/CD e
 ##### Step 1: Create OAuth Client
 
 1. Go to **Tailscale OAuth clients page**:
+
    ```
    https://login.tailscale.com/admin/settings/oauth
    ```
@@ -178,6 +184,7 @@ OAuth clients provide better security and are recommended for production CI/CD e
 2. Click **Generate OAuth client**
 
 3. Configure the OAuth client:
+
    - **Description**: `GitHub Actions CI`
    - **Tags**: Select `tag:ci` (and optionally `tag:bastion`)
    - **Scopes**: Select the following:
@@ -199,10 +206,10 @@ In your GitHub repository:
 2. Click **New repository secret**
 3. Add two secrets:
 
-   | Secret Name | Secret Value | Example |
-   |-------------|--------------|---------|
-   | `TAILSCALE_OAUTH_CLIENT_ID` | Your OAuth client ID | `kDNxxxxxxxxxxxxxxxxxxxxxxx` |
-   | `TAILSCALE_OAUTH_SECRET` | Your OAuth client secret | `tskey-client-xxxxxxxxxxxxx` |
+   | Secret Name                 | Secret Value             | Example                      |
+   | --------------------------- | ------------------------ | ---------------------------- |
+   | `TAILSCALE_OAUTH_CLIENT_ID` | Your OAuth client ID     | `kDNxxxxxxxxxxxxxxxxxxxxxxx` |
+   | `TAILSCALE_OAUTH_SECRET`    | Your OAuth client secret | `tskey-client-xxxxxxxxxxxxx` |
 
 ##### Step 3: Workflow Configuration for OAuth
 
@@ -233,6 +240,7 @@ Use this configuration in your workflow (`.github/workflows/packer-vexxhost-bast
 **Why?** Tags implicitly own themselves by default. However, when you explicitly define owners in `tagOwners`, tags **lose their implicit self-ownership**. OAuth clients authenticated with a tag need that tag to own itself to create devices.
 
 **Common Error Without Self-Ownership:**
+
 ```
 Status: 400, Message: "requested tags [tag:ci] are invalid or not permitted"
 ```
@@ -246,6 +254,7 @@ Auth keys are simpler to set up but require manual rotation and provide less sec
 ##### Step 1: Create Auth Key
 
 1. Go to **Tailscale auth keys page**:
+
    ```
    https://login.tailscale.com/admin/settings/keys
    ```
@@ -253,6 +262,7 @@ Auth keys are simpler to set up but require manual rotation and provide less sec
 2. Click **Generate auth key**
 
 3. Configure the key:
+
    - **Description**: `GitHub Actions CI & Bastion`
    - **Reusable**: ✅ Yes (allows multiple runners to use it)
    - **Ephemeral**: ✅ Yes (recommended for CI - devices auto-cleanup)
@@ -277,8 +287,8 @@ In your GitHub repository:
 2. Click **New repository secret**
 3. Add one secret:
 
-   | Secret Name | Secret Value | Example |
-   |-------------|--------------|---------|
+   | Secret Name          | Secret Value  | Example                                    |
+   | -------------------- | ------------- | ------------------------------------------ |
    | `TAILSCALE_AUTH_KEY` | Your auth key | `tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
 
 ##### Step 3: Workflow Configuration for Auth Key
@@ -302,10 +312,10 @@ The bastion host uses the same `TAILSCALE_AUTH_KEY` in the cloud-init script:
 
 ```yaml
 tailscale up \
-  --authkey="${TAILSCALE_AUTH_KEY}" \
-  --hostname="${BASTION_HOSTNAME}" \
-  --advertise-tags=tag:bastion \
-  --ssh
+--authkey="${TAILSCALE_AUTH_KEY}" \
+--hostname="${BASTION_HOSTNAME}" \
+--advertise-tags=tag:bastion \
+--ssh
 ```
 
 ---
@@ -313,12 +323,14 @@ tailscale up \
 #### Which Method Should I Use?
 
 **Use OAuth Client (Option A) if:**
+
 - ✅ You're running production CI/CD pipelines
 - ✅ You need detailed audit trails
 - ✅ You want automatic credential rotation
 - ✅ You have time to configure tag self-ownership
 
 **Use Auth Key (Option B) if:**
+
 - ✅ You're testing or prototyping
 - ✅ You want the simplest setup
 - ✅ You're okay with manual key rotation
@@ -419,26 +431,31 @@ Once a build runs:
 **Solution**:
 
 1. **Check OpenStack console logs**:
+
    ```bash
    openstack console log show bastion-gh-XXXXXX
    ```
+
    Look for Tailscale installation or connection errors
 
 2. **Verify authentication secrets** (depending on your auth method):
 
    **If using OAuth (Option A)**:
+
    - Verify `TAILSCALE_OAUTH_CLIENT_ID` secret exists
    - Verify `TAILSCALE_OAUTH_SECRET` secret exists
    - Check OAuth client has `devices:write` scope
    - Ensure OAuth client has `tag:bastion` assigned
 
    **If using auth key (Option B)**:
+
    - Verify `TAILSCALE_AUTH_KEY` secret exists in GitHub
    - Ensure auth key has both `tag:ci` AND `tag:bastion` tags
    - Check auth key hasn't expired
    - Verify auth key is marked as "Reusable"
 
 3. **Check network connectivity**:
+
    - Ensure bastion can reach Tailscale coordination servers (outbound HTTPS)
    - VexxHost network should allow outbound connections to `*.tailscale.com`
 
@@ -552,17 +569,20 @@ Enable Tailscale audit logging to track:
 ## Reference Links
 
 ### General Documentation
+
 - [Tailscale ACL Documentation](https://tailscale.com/kb/1018/acls)
 - [Tailscale SSH Documentation](https://tailscale.com/kb/1193/tailscale-ssh)
 - [Tailscale Policy Syntax](https://tailscale.com/kb/1337/policy-syntax)
 - [Tailscale Tags Documentation](https://tailscale.com/kb/1068/tags)
 
 ### Authentication Methods
+
 - [OAuth Clients Documentation](https://tailscale.com/kb/1215/oauth-clients)
 - [Auth Keys Documentation](https://tailscale.com/kb/1085/auth-keys)
 - [Tailscale GitHub Action](https://github.com/tailscale/github-action)
 
 ### Troubleshooting Resources
+
 - [QUICK_FIX.md](../QUICK_FIX.md) - Fast fix for OAuth tag permission issues
 - [TAILSCALE_FIX.md](../TAILSCALE_FIX.md) - Detailed troubleshooting guide
 
@@ -577,7 +597,12 @@ If you already have an ACL configuration, merge the sections. **Important**: Inc
     "tag:existing": ["autogroup:admin"],
     // Add these (note self-ownership):
     "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
-    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci", "tag:bastion"]
+    "tag:bastion": [
+      "autogroup:admin",
+      "autogroup:owner",
+      "tag:ci",
+      "tag:bastion"
+    ]
   },
 
   // Your existing acls

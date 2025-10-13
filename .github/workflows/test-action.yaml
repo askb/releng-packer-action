@@ -53,27 +53,17 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.mode == 'validate')
     steps:
       - name: Checkout code
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871  # v4.2.1
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
           submodules: true
 
-      - name: Run Packer Action - Validate
+      - name: Run Packer Action - Validate (Auto-discovery)
         uses: ./
         with:
           mode: validate
-          packer-dir: examples
-          template-path: templates/builder.pkr.hcl
-          var-file: vars/ubuntu-22.04.pkrvars.hcl
-          cloud-name: vexxhost
-          debug: ${{ inputs.debug_mode || false }}
-        env:
-          VEXXHOST_AUTH_URL: ${{ secrets.VEXXHOST_AUTH_URL }}
-          VEXXHOST_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          VEXXHOST_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
-          VEXXHOST_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
-          VEXXHOST_PASSWORD: ${{ secrets.VEXXHOST_PASSWORD }}
-          VEXXHOST_NETWORK_ID: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          VEXXHOST_REGION: ${{ secrets.VEXXHOST_REGION }}
+          packer_working_dir: examples
+          path_prefix: packer-test
+          debug_mode: ${{ inputs.debug_mode || false }}
 
   test-build:
     name: Test Action - Build Mode
@@ -82,7 +72,7 @@ jobs:
       github.event_name == 'workflow_dispatch' && inputs.mode == 'build'
     steps:
       - name: Checkout code
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871  # v4.2.1
+        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
           submodules: true
 
@@ -90,24 +80,22 @@ jobs:
         uses: ./
         with:
           mode: build
-          packer-dir: examples
-          template-path: templates/builder.pkr.hcl
-          var-file: vars/ubuntu-22.04.pkrvars.hcl
-          cloud-name: vexxhost
-          bastion-flavor: v3-standard-2
-          bastion-image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
-          bastion-network: odlci
-          debug: ${{ inputs.debug_mode || false }}
-        env:
-          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-          VEXXHOST_AUTH_URL: ${{ secrets.VEXXHOST_AUTH_URL }}
-          VEXXHOST_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          VEXXHOST_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
-          VEXXHOST_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
-          VEXXHOST_PASSWORD: ${{ secrets.VEXXHOST_PASSWORD }}
-          VEXXHOST_NETWORK_ID: ${{ secrets.VEXXHOST_NETWORK_ID }}
-          VEXXHOST_REGION: ${{ secrets.VEXXHOST_REGION }}
+          packer_working_dir: examples
+          packer_template: templates/builder.pkr.hcl
+          packer_vars_file: vars/ubuntu-22.04.pkrvars.hcl
+          path_prefix: packer-build
+          bastion_flavor: v3-standard-2
+          bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
+          bastion_network: odlci
+          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
+          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
+          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
+          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD }}
+          vexxhost_region: ${{ secrets.VEXXHOST_REGION }}
+          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          tailscale_oauth_secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          debug_mode: ${{ inputs.debug_mode || false }}
 
       - name: Display build output
         if: always()

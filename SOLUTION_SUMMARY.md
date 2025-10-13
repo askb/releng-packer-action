@@ -1,12 +1,15 @@
 # Tailscale OAuth Connection Issue - SOLVED ✅
 
 ## Problem
+
 GitHub Actions workflow failing with:
+
 ```
 Status: 400, Message: "requested tags [tag:ci] are invalid or not permitted"
 ```
 
 ## Root Cause
+
 **Tag self-ownership** missing in Tailscale ACL configuration.
 
 When you define explicit `tagOwners` in your ACL, tags **lose their implicit self-ownership**. OAuth clients authenticated with a tag need that tag to own itself to create devices with that tag.
@@ -18,6 +21,7 @@ When you define explicit `tagOwners` in your ACL, tags **lose their implicit sel
 2. **Update `tagOwners`** section:
 
    **CHANGE FROM:**
+
    ```json
    "tagOwners": {
      "tag:ci": ["autogroup:admin", "autogroup:owner"],
@@ -26,6 +30,7 @@ When you define explicit `tagOwners` in your ACL, tags **lose their implicit sel
    ```
 
    **CHANGE TO:**
+
    ```json
    "tagOwners": {
      "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
@@ -43,10 +48,12 @@ When you define explicit `tagOwners` in your ACL, tags **lose their implicit sel
 ## Documentation Created
 
 ### Quick Reference
+
 - **[QUICK_FIX.md](./QUICK_FIX.md)** - 2-minute fix guide
 - **[TAG_SELF_OWNERSHIP_EXPLAINED.md](./TAG_SELF_OWNERSHIP_EXPLAINED.md)** - Visual explanation with diagrams
 
 ### Complete Documentation
+
 - **[docs/TAILSCALE_SETUP.md](./docs/TAILSCALE_SETUP.md)** - Complete setup guide
   - Option A: OAuth Client (Recommended)
   - Option B: Auth Key (Simpler)
@@ -55,11 +62,13 @@ When you define explicit `tagOwners` in your ACL, tags **lose their implicit sel
   - Troubleshooting for both methods
 
 ### Troubleshooting
+
 - **[TAILSCALE_FIX.md](./TAILSCALE_FIX.md)** - Detailed troubleshooting guide
 
 ## Both Authentication Methods Documented
 
 ### Option A: OAuth Client (Recommended for Production)
+
 ✅ Better security (scoped tokens)
 ✅ Automatic rotation
 ✅ Detailed audit logs
@@ -68,6 +77,7 @@ When you define explicit `tagOwners` in your ACL, tags **lose their implicit sel
 **Setup**: See [docs/TAILSCALE_SETUP.md](./docs/TAILSCALE_SETUP.md) Section 2, Option A
 
 ### Option B: Auth Key (Simpler)
+
 ✅ Simple setup
 ✅ No self-ownership requirement
 ⚠️ Manual rotation required

@@ -392,7 +392,7 @@ runs:
     - name: Determine packer directory
       shell: bash
       run: |
-        WORK_DIR="${{ inputs.packer_working_dir }}"
+        WORK_DIR="${{ github.workspace }}/${{ inputs.path_prefix }}/${{ inputs.packer_working_dir }}"
 
         # Check if packer_working_dir points to a subdirectory with packer files
         if [ -d "$WORK_DIR/packer" ]; then
@@ -410,7 +410,6 @@ runs:
       if: inputs.mode == 'validate'
       id: packer-validate
       shell: bash
-      working-directory: ${{ inputs.path_prefix }}
       env:
         OS_CLOUD: ${{ inputs.os_cloud }}
       run: |

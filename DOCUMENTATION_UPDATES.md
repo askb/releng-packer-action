@@ -11,18 +11,21 @@ This is now the **complete reference guide** for Tailscale authentication with b
 **Added comprehensive documentation for BOTH authentication methods:**
 
 ##### Option A: OAuth Client (Recommended for Production)
+
 - Complete setup steps (create OAuth client, store secrets, configure workflow)
 - Tag self-ownership requirement explanation
 - Common error documentation
 - Best practices
 
 ##### Option B: Auth Key (Simpler Alternative)
+
 - Complete setup steps (create auth key, store secret, configure workflow)
 - Workflow configuration examples
 - Expiration and rotation guidance
 - Best practices
 
 #### Added Comparison Table
+
 - Security comparison
 - Audit trail comparison
 - Setup complexity
@@ -31,18 +34,22 @@ This is now the **complete reference guide** for Tailscale authentication with b
 - Compromise risk assessment
 
 #### Enhanced Troubleshooting Section
+
 Now covers BOTH auth methods:
+
 - OAuth-specific errors (tag self-ownership)
 - Auth key-specific errors (expiration, permissions)
 - Method-specific debugging steps
 - Switching between methods guide
 
 #### Added Best Practices Sections
+
 - OAuth Client Best Practices
 - Auth Key Best Practices
 - Security considerations for each method
 
 #### Updated Reference Links
+
 - Added OAuth Clients documentation
 - Added GitHub Action documentation
 - Added links to QUICK_FIX.md and TAILSCALE_FIX.md
@@ -52,6 +59,7 @@ Now covers BOTH auth methods:
 **Before**: Incorrectly focused on OAuth client configuration alone
 
 **After**:
+
 - Correctly identifies **tag self-ownership** as the root cause
 - Explains why Option 1 didn't work
 - Documents the implicit self-ownership behavior
@@ -61,6 +69,7 @@ Now covers BOTH auth methods:
 ### 3. `QUICK_FIX.md` ✅ New Quick Reference
 
 Created concise 2-minute fix guide:
+
 - Minimal steps to fix OAuth tag permission error
 - Before/after ACL configuration
 - Link to detailed documentation
@@ -68,21 +77,27 @@ Created concise 2-minute fix guide:
 ## Key Documentation Improvements
 
 ### 1. Clarity on Tag Self-Ownership
+
 All documents now clearly explain:
+
 - Tags implicitly own themselves
 - Explicit `tagOwners` removes implicit self-ownership
 - Tags must be added to their own owner list
 - This is critical for OAuth, less critical for auth keys
 
 ### 2. Method Comparison
+
 Users can now easily decide between:
+
 - **OAuth**: Production, better security, requires more setup
 - **Auth Keys**: Testing, simpler setup, manual rotation
 
 ### 3. Complete Workflow Examples
+
 Both methods have full workflow configuration examples:
 
 **OAuth**:
+
 ```yaml
 - name: Setup Tailscale VPN
   uses: tailscale/github-action@v2
@@ -95,6 +110,7 @@ Both methods have full workflow configuration examples:
 ```
 
 **Auth Key**:
+
 ```yaml
 - name: Setup Tailscale VPN
   uses: tailscale/github-action@v2
@@ -105,7 +121,9 @@ Both methods have full workflow configuration examples:
 ```
 
 ### 4. Troubleshooting by Method
+
 Each error is now tagged with:
+
 - **Affects**: OAuth clients (Option A) / Auth keys (Option B)
 - Method-specific solutions
 - Clear indication which auth method the error applies to

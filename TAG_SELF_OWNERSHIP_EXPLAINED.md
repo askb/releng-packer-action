@@ -134,6 +134,7 @@
 ### Tailscale's Tag Ownership Rules
 
 1. **Default Behavior (No `tagOwners` defined)**:
+
    - All tags implicitly own themselves
    - OAuth client with `tag:ci` can create devices with `tag:ci`
    - Simple and works out of the box
@@ -165,15 +166,15 @@ Add each tag to its own owner list:
 {
   "tagOwners": {
     "tag:ci": [
-      "autogroup:admin",      // Admins can create devices with tag:ci
-      "autogroup:owner",      // Owners can create devices with tag:ci
-      "tag:ci"                // OAuth clients WITH tag:ci can create devices with tag:ci
+      "autogroup:admin", // Admins can create devices with tag:ci
+      "autogroup:owner", // Owners can create devices with tag:ci
+      "tag:ci" // OAuth clients WITH tag:ci can create devices with tag:ci
     ],
     "tag:bastion": [
-      "autogroup:admin",      // Admins can create bastions
-      "autogroup:owner",      // Owners can create bastions
-      "tag:ci",               // CI runners can create bastions
-      "tag:bastion"           // Bastions can create other bastions (self-ownership)
+      "autogroup:admin", // Admins can create bastions
+      "autogroup:owner", // Owners can create bastions
+      "tag:ci", // CI runners can create bastions
+      "tag:bastion" // Bastions can create other bastions (self-ownership)
     ]
   },
 
