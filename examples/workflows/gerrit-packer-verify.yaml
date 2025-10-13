@@ -10,41 +10,42 @@ on:
   workflow_dispatch:
     inputs:
       GERRIT_BRANCH:
-        description: "Branch that change is against"
+        description: 'Branch that change is against'
         required: true
         type: string
       GERRIT_CHANGE_ID:
-        description: "The ID for the change"
+        description: 'The ID for the change'
         required: true
         type: string
       GERRIT_CHANGE_NUMBER:
-        description: "The Gerrit number"
+        description: 'The Gerrit number'
         required: true
         type: string
       GERRIT_CHANGE_URL:
-        description: "URL to the change"
+        description: 'URL to the change'
         required: true
         type: string
       GERRIT_EVENT_TYPE:
-        description: "Type of Gerrit event"
+        description: 'Type of Gerrit event'
         required: true
         type: string
       GERRIT_PATCHSET_NUMBER:
-        description: "The patch number for the change"
+        description: 'The patch number for the change'
         required: true
         type: string
       GERRIT_PATCHSET_REVISION:
-        description: "The revision sha"
+        description: 'The revision sha'
         required: true
         type: string
       GERRIT_PROJECT:
-        description: "Project in Gerrit"
+        description: 'Project in Gerrit'
         required: true
         type: string
       GERRIT_REFSPEC:
-        description: "Gerrit refspec of change"
+        description: 'Gerrit refspec of change'
         required: true
         type: string
+
 
 concurrency:
   group: ${{ github.event.inputs.GERRIT_CHANGE_ID || github.run_id }}
