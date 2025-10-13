@@ -101,13 +101,12 @@ jobs:
       - name: Display build output
         if: always()
         run: |
-          {
-            echo "## Build Results"
-            echo ""
-            echo "- **Mode:** ${{ steps.build.outputs.mode || 'N/A' }}"
-            echo "- **Status:** ${{ steps.build.outputs.status || 'N/A' }}"
-            echo "- **Bastion IP:** ${{ steps.build.outputs.bastion_ip || 'N/A' }}"
-            echo "- **Job Status:** ${{ job.status }}"
+          echo "## Build Results"
+          echo ""
+          echo "- **Mode:** ${{ steps.build.outputs.mode || 'N/A' }}"
+          echo "- **Status:** ${{ steps.build.outputs.status || 'N/A' }}"
+          echo "- **Bastion IP:** ${{ steps.build.outputs.bastion_ip || 'N/A' }}"
+          echo "- **Job Status:** ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   summary:
