@@ -434,6 +434,20 @@ runs:
         mkdir -p "${{ github.workspace }}/logs"
         PACKER_LOGS_DIR="${{ github.workspace }}/logs"
 
+        # Create minimal cloud-env file for validation (if it doesn't exist)
+        if [ ! -f "${{ github.workspace }}/cloud-env.pkrvars.hcl" ] && [ ! -f "${{ github.workspace }}/cloud-env.json" ]; then
+          echo "Creating minimal cloud-env for validation..."
+          cat > "${{ github.workspace }}/cloud-env.pkrvars.hcl" <<EOF
+        # Minimal cloud environment for packer validation
+        cloud_auth_url      = "https://example.com:5000/v3"
+        cloud_tenant_name   = "validation-tenant"
+        cloud_username      = "validation-user"
+        cloud_password      = "validation-pass"
+        cloud_region        = "RegionOne"
+        cloud_network       = "validation-network"
+        EOF
+        fi
+
         # Function to validate a template with a varfile
         validate_template() {
           local varfile="$1"
