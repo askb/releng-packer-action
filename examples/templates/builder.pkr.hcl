@@ -49,6 +49,12 @@ variable "cloud_network" {
   description = "Network name for the instance"
 }
 
+variable "cloud_domain_name" {
+  type        = string
+  default     = env("OS_USER_DOMAIN_NAME")
+  description = "OpenStack domain name (required for v3 API)"
+}
+
 # ========================================
 # Image Configuration Variables
 # ========================================
@@ -141,6 +147,7 @@ source "openstack" "builder" {
   # Authentication
   identity_endpoint = var.cloud_auth_url
   tenant_name       = var.cloud_tenant_name
+  domain_name       = var.cloud_domain_name
   username          = var.cloud_username
   password          = var.cloud_password
   region            = var.cloud_region
