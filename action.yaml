@@ -144,7 +144,7 @@ runs:
     # ========================================
     - name: Setup Tailscale VPN
       if: inputs.mode == 'build'
-      uses: tailscale/github-action@9b0941a5b0464aaf849d388c0fb004e3e15d9b92 # v2.0.3
+      uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
       with:
         oauth_client_id: ${{ inputs.tailscale_oauth_client_id }}
         oauth_secret: ${{ inputs.tailscale_oauth_secret }}
