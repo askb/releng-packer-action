@@ -7,45 +7,45 @@
 
 name: Gerrit Packer Merge (Build)
 
+# yamllint disable-line rule:truthy
 on:
   workflow_dispatch:
     inputs:
       GERRIT_BRANCH:
         description: "Branch that change is against"
-        required: false
+        required: true
         type: string
-        default: "main"
       GERRIT_CHANGE_ID:
         description: "The ID for the change"
-        required: false
+        required: true
         type: string
       GERRIT_CHANGE_NUMBER:
         description: "The Gerrit number"
-        required: false
+        required: true
         type: string
       GERRIT_CHANGE_URL:
         description: "URL to the change"
-        required: false
+        required: true
         type: string
       GERRIT_EVENT_TYPE:
         description: "Type of Gerrit event"
-        required: false
+        required: true
         type: string
       GERRIT_PATCHSET_NUMBER:
         description: "The patch number for the change"
-        required: false
+        required: true
         type: string
       GERRIT_PATCHSET_REVISION:
         description: "The revision sha"
-        required: false
+        required: true
         type: string
       GERRIT_PROJECT:
         description: "Project in Gerrit"
-        required: false
+        required: true
         type: string
       GERRIT_REFSPEC:
         description: "Gerrit refspec of change"
-        required: false
+        required: true
         type: string
 
   schedule:
@@ -53,7 +53,7 @@ on:
     - cron: "0 0 1 * *"
 
 concurrency:
-  group: packer-build-${{ github.event.inputs.GERRIT_CHANGE_ID || github.run_id }}
+  group: packer-build-${{ inputs.GERRIT_CHANGE_ID || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -75,21 +75,21 @@ jobs:
             echo "🔄 Gerrit merge event - detecting changes"
           fi
 
-      - name: Checkout Gerrit Change
-        if: steps.check-trigger.outputs.build_all == 'false' && inputs.GERRIT_REFSPEC != ''
+      - name: Checkout change
+        if: github.event_name != 'schedule'
+        # yamllint disable-line rule:line-length
         uses: lfit/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
         with:
           gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
-          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
-          gerrit-url: ${{ vars.GERRIT_URL }}
           delay: "0s"
           submodules: "true"
 
       - name: Checkout repository (scheduled)
-        if: steps.check-trigger.outputs.build_all == 'true' || inputs.GERRIT_REFSPEC == ''
+        if: github.event_name == 'schedule'
+        # yamllint disable-line rule:line-length
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ inputs.GERRIT_BRANCH || 'main' }}
+          ref: main
           submodules: true
 
       - name: Update submodules
@@ -145,9 +145,9 @@ jobs:
             PROVISION_CHANGED=false
 
             # Get changed files from git diff
-            if [[ -n "${{ inputs.GERRIT_PATCHSET_REVISION }}" ]]; then
+            if [[ "${{ github.event_name }}" != "schedule" && -n "${{ inputs.GERRIT_PATCHSET_REVISION }}" ]]; then
               # Compare against base branch for Gerrit changes
-              BASE_REF="${{ inputs.GERRIT_BRANCH || 'main' }}"
+              BASE_REF="${{ inputs.GERRIT_BRANCH }}"
               CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD" || git diff --name-only HEAD~1)
             else
               # Fallback to last commit
@@ -247,21 +247,21 @@ jobs:
     outputs:
       image_name_${{ matrix.template }}_${{ matrix.platform }}: ${{ steps.build.outputs.image_name }}
     steps:
-      - name: Checkout Gerrit Change
-        if: inputs.GERRIT_REFSPEC != ''
+      - name: Checkout change
+        if: github.event_name != 'schedule'
+        # yamllint disable-line rule:line-length
         uses: lfit/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
         with:
           gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
-          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
-          gerrit-url: ${{ vars.GERRIT_URL }}
           delay: "0s"
           submodules: "true"
 
       - name: Checkout repository (scheduled)
-        if: inputs.GERRIT_REFSPEC == ''
+        if: github.event_name == 'schedule'
+        # yamllint disable-line rule:line-length
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          ref: ${{ inputs.GERRIT_BRANCH || 'main' }}
+          ref: main
           submodules: true
 
       - name: Update submodules
@@ -269,7 +269,7 @@ jobs:
 
       - name: Build Packer Image
         id: build
-        uses: askb/releng-packer-action@main
+        uses: ./
         with:
           mode: build
           packer_template: "packer/templates/${{ matrix.template }}.pkr.hcl"
@@ -326,7 +326,7 @@ jobs:
           fi
 
           # Generate detailed summary
-          cat >> $GITHUB_STEP_SUMMARY << EOF
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## Packer Build Summary
 
           **Trigger**: ${{ github.event_name == 'schedule' && 'Monthly Scheduled Build' || 'Gerrit Merge Event' }}
