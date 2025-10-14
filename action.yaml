@@ -235,17 +235,10 @@ runs:
     # ========================================
     # Step 2: Setup OpenStack CLI (Build Mode Only)
     # ========================================
-    - name: Setup Python and OpenStack CLI
-      if: inputs.mode == 'build'
-      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-      with:
-        python-version: "3.11"
-
     - name: Install OpenStack CLI
       if: inputs.mode == 'build'
       shell: bash
       run: |
-        python -m pip install --upgrade pip
         pip install python-openstackclient
 
     - name: Configure OpenStack credentials
@@ -360,7 +353,49 @@ runs:
         echo "bastion_ip=${{ env.BASTION_IP }}" >> $GITHUB_OUTPUT
 
     # ========================================
-    # Step 4: Setup Packer
+    # Step 4: Setup Python and Ansible (All Modes)
+    # ========================================
+    - name: Setup Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with:
+        python-version: "3.11"
+
+    - name: Install Ansible
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible~=9.2.0
+
+    - name: Install Ansible Galaxy requirements
+      shell: bash
+      working-directory: ${{ github.workspace }}/${{ steps.setup-path.outputs.path_prefix }}/${{ inputs.packer_working_dir }}
+      run: |
+        # Look for common-packer directory (could be a submodule)
+        if [[ -d "common-packer" ]]; then
+          COMMON_PACKER_DIR="common-packer"
+        elif [[ -d "packer/common-packer" ]]; then
+          COMMON_PACKER_DIR="packer/common-packer"
+        else
+          echo "⚠️ Warning: common-packer directory not found. Skipping ansible-galaxy requirements."
+          exit 0
+        fi
+
+        # Install common-packer Ansible Galaxy requirements
+        if [[ -f "$COMMON_PACKER_DIR/requirements.yaml" ]]; then
+          echo "📦 Installing Ansible Galaxy requirements from $COMMON_PACKER_DIR/requirements.yaml"
+          ansible-galaxy install -p .galaxy -r "$COMMON_PACKER_DIR/requirements.yaml"
+        else
+          echo "⚠️ Warning: $COMMON_PACKER_DIR/requirements.yaml not found"
+        fi
+
+        # Install project-specific requirements if they exist
+        if [[ -f "requirements.yaml" ]]; then
+          echo "📦 Installing project-specific Ansible Galaxy requirements"
+          ansible-galaxy install -p .galaxy -r requirements.yaml
+        fi
+
+    # ========================================
+    # Step 5: Setup Packer
     # ========================================
     - name: Setup Packer
       uses: hashicorp/setup-packer@1aa358be5cf73883762b302a3a03abd66e75b232 # v3.1.0
@@ -428,7 +463,7 @@ runs:
         echo "✅ SSH agent started"
 
     # ========================================
-    # Step 5: Run Packer Operation
+    # Step 6: Run Packer Operation
     # ========================================
     - name: Determine packer directory
       shell: bash
@@ -678,7 +713,7 @@ runs:
         fi
 
     # ========================================
-    # Step 6: Cleanup
+    # Step 7: Cleanup
     # ========================================
     - name: Cleanup bastion instance
       if: always() && inputs.mode == 'build'
