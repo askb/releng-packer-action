@@ -51,6 +51,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  actionlint:
+    needs: clear-vote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lfreleng-actions/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
+        with:
+          gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
+          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
+          gerrit-url: ${{ vars.GERRIT_URL }}
+          delay: "0s"
+      - name: Download actionlint
+        id: get_actionlint
+        run: bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+        shell: bash
+      - name: Check workflow files
+        run: ${{ steps.get_actionlint.outputs.executable }} -color
+        shell: bash
+
   clear-vote:
     runs-on: ubuntu-latest
     steps:
@@ -67,6 +85,42 @@ jobs:
           vote-type: clear
       - name: Allow replication
         run: sleep 10s
+
+  # run pre-commit tox env separately to get use of more parallel processing
+  pre-commit:
+    needs: clear-vote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lfreleng-actions/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
+        with:
+          gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
+          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
+          gerrit-url: ${{ vars.GERRIT_URL }}
+          delay: "0s"
+      - uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.11"
+      - name: Run static analysis and format checkers
+        run: pipx run pre-commit run --all-files --show-diff-on-failure
+
+  tox-verify:
+    needs: clear-vote
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lfreleng-actions/checkout-gerrit-change-action@54d751e8bd167bc91f7d665dabe33fae87aaaa63 # v0.9
+        with:
+          gerrit-refspec: ${{ inputs.GERRIT_REFSPEC }}
+          gerrit-project: ${{ inputs.GERRIT_PROJECT }}
+          gerrit-url: ${{ vars.GERRIT_URL }}
+          delay: "0s"
+          submodules: "true"
+      - uses: actions/setup-python@v5.4.0
+        id: setup-python
+        with:
+          python-version: "3.11"
+      - name: Run tox
+        run: >-
+          pipx run tox
 
   packer-validator:
     needs: clear-vote
