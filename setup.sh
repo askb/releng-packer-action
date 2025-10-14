@@ -95,7 +95,7 @@ echo "6. Show secret configuration guide"
 echo "7. Exit"
 echo ""
 
-read -p "Select option (1-7): " option
+read -r -p "Select option (1-7): " option
 
 case $option in
     1)
@@ -120,7 +120,7 @@ case $option in
 
         if [ -d "$SCRIPT_DIR/packer" ]; then
             warning "packer directory already exists"
-            read -p "Overwrite? (y/N): " overwrite
+            read -r -p "Overwrite? (y/N): " overwrite
             if [[ ! $overwrite =~ ^[Yy]$ ]]; then
                 info "Skipping packer setup"
                 exit 0
@@ -173,19 +173,25 @@ case $option in
         fi
 
         # Validate workflow YAML
-        python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.github/workflows/packer-vexxhost-bastion-build.yaml'))" && \
-            success "Workflow YAML is valid" || \
+        if python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.github/workflows/packer-vexxhost-bastion-build.yaml'))"; then
+            success "Workflow YAML is valid"
+        else
             error "Workflow YAML validation failed"
+        fi
 
         # Validate pre-commit config
-        python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.pre-commit-config.yaml'))" && \
-            success "Pre-commit config is valid" || \
+        if python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.pre-commit-config.yaml'))"; then
+            success "Pre-commit config is valid"
+        else
             error "Pre-commit config validation failed"
+        fi
 
         # Validate yamllint config
-        python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.yamllint.conf'))" && \
-            success "Yamllint config is valid" || \
+        if python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.yamllint.conf'))"; then
+            success "Yamllint config is valid"
+        else
             error "Yamllint config validation failed"
+        fi
         ;;
 
     5)

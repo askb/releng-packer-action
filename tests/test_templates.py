@@ -63,11 +63,11 @@ def test_packer_template_syntax(template):
 def test_templates_have_required_sections():
     """Test that templates have required sections."""
     templates = get_packer_templates()
-    
+
     for template in templates:
         with open(template, "r") as f:
             content = f.read()
-            
+
         # Check for basic required blocks
         assert "source" in content or "build" in content, \
             f"{template} should have source or build block"
@@ -77,13 +77,13 @@ def test_templates_have_required_sections():
 def test_var_files_have_required_variables():
     """Test that var files define expected variables."""
     var_files = get_var_files()
-    
+
     expected_vars = ["cloud_network", "source_image_name"]
-    
+
     for var_file in var_files:
         with open(var_file, "r") as f:
             content = f.read()
-        
+
         # At least one of the expected variables should be present
         has_var = any(var in content for var in expected_vars)
         assert has_var, f"{var_file} should define at least one expected variable"
@@ -101,7 +101,7 @@ def test_baseline_provision_script_has_content():
     if baseline.exists():
         with open(baseline, "r") as f:
             content = f.read()
-        
+
         # Should have more than just shebang and comments
         non_comment_lines = [
             line for line in content.split("\n")
@@ -113,18 +113,18 @@ def test_baseline_provision_script_has_content():
 def test_no_absolute_paths_in_templates():
     """Test that templates don't use absolute paths (should be relative)."""
     templates = get_packer_templates()
-    
+
     for template in templates:
         with open(template, "r") as f:
             content = f.read()
-        
+
         # Check for suspicious absolute paths (excluding valid uses like /tmp)
         lines = content.split("\n")
         for i, line in enumerate(lines, 1):
             # Skip comments
             if line.strip().startswith("#"):
                 continue
-            
+
             # Check for absolute paths that might be problematic
             if '= "/' in line or "= '/" in line:
                 # Allow certain paths
@@ -139,11 +139,11 @@ def test_templates_reference_valid_scripts():
     """Test that templates reference scripts that exist."""
     templates = get_packer_templates()
     provision_dir = Path("examples/provision")
-    
+
     for template in templates:
         with open(template, "r") as f:
             content = f.read()
-        
+
         # Look for script references
         if "provision/baseline.sh" in content:
             baseline = provision_dir / "baseline.sh"

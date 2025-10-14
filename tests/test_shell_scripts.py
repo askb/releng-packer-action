@@ -19,9 +19,9 @@ def test_shellcheck_passes_on_all_scripts():
     """Test that shellcheck passes on all shell scripts."""
     scripts = list(Path(".").glob("**/*.sh"))
     scripts = [s for s in scripts if ".venv" not in str(s) and "node_modules" not in str(s)]
-    
+
     assert len(scripts) > 0, "No shell scripts found"
-    
+
     for script in scripts:
         result = subprocess.run(
             ["shellcheck", "-x", str(script)],
@@ -89,7 +89,7 @@ def test_scripts_have_shebang():
         "test-templates.sh",
         "examples/provision/baseline.sh",
     ]
-    
+
     for script_path in scripts:
         with open(script_path, "r") as f:
             first_line = f.readline()
@@ -103,7 +103,7 @@ def test_scripts_have_error_handling():
         "setup.sh",
         "test-templates.sh",
     ]
-    
+
     for script_path in scripts:
         with open(script_path, "r") as f:
             content = f.read()
@@ -116,7 +116,7 @@ def test_no_hardcoded_secrets():
     """Test that scripts don't contain hardcoded secrets."""
     scripts = list(Path(".").glob("**/*.sh"))
     scripts = [s for s in scripts if ".venv" not in str(s)]
-    
+
     # Common patterns that might indicate secrets
     secret_patterns = [
         "password=",
@@ -126,7 +126,7 @@ def test_no_hardcoded_secrets():
         "AWS_SECRET",
         "OPENSTACK_PASSWORD",
     ]
-    
+
     for script in scripts:
         with open(script, "r") as f:
             content = f.read().lower()
