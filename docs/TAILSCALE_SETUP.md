@@ -1,24 +1,56 @@
-# Tailscale Setup for Packer VexxHost Bastion Action
+# Tailscale Setup Guide
 
-This document provides the required Tailscale configuration for using the Packer VexxHost Bastion Action.
+Complete guide for configuring Tailscale for Packer builds with bastion hosts.
+
+## Overview
+
+This action requires Tailscale for secure connectivity between GitHub Actions runners and VexxHost bastion hosts. This guide covers both OAuth (recommended) and auth key methods.
 
 ## Prerequisites
 
-1. A Tailscale account (sign up at https://tailscale.com)
-2. Admin access to your Tailscale network (tailnet)
-3. Ability to modify ACLs in the Tailscale admin console
+- Tailscale account (free tier works)
+- Admin access to Tailscale organization
+- GitHub repository with appropriate permissions
 
-## Required Configuration
+## Authentication Methods
 
-### 1. Tailscale ACL Configuration
+### OAuth Client (Recommended)
 
-The action requires specific Access Control List (ACL) rules in your Tailscale network to allow:
+OAuth clients provide:
 
-- GitHub Actions runners (`tag:ci`) to connect to the tailnet
-- Bastion hosts (`tag:bastion`) to join the network
-- SSH connections from runners to bastion hosts
+- ✅ Better security with scoped permissions
+- ✅ Automatic token rotation
+- ✅ Audit logging
+- ✅ No manual key rotation
 
-Navigate to your Tailscale admin console at https://login.tailscale.com/admin/acls and configure the following:
+### Auth Keys (Legacy)
+
+Auth keys are simpler but:
+
+- ⚠️ Require manual rotation
+- ⚠️ Less granular permissions
+- ⚠️ Deprecated by Tailscale
+
+---
+
+## Method 1: OAuth Client Setup (Recommended)
+
+### Step 1: Create OAuth Client
+
+1. Go to [Tailscale Admin Console → OAuth Clients](https://login.tailscale.com/admin/settings/oauth)
+2. Click **"Generate OAuth client"**
+3. Configure settings:
+   - **Description:** `GitHub Actions - Packer Builds`
+   - **Write Scopes:** Select `auth_keys`
+   - **Tags:** `tag:ci`, `tag:bastion`
+4. Click **"Generate client"**
+5. **IMPORTANT:** Copy both values immediately:
+   - **Client ID:** `kA4v...` → Save as `TAILSCALE_OAUTH_CLIENT_ID`
+   - **Client Secret:** `tskey-client-kA4v...` → Save as `TAILSCALE_OAUTH_SECRET`
+
+### Step 2: Configure ACLs
+
+Update your Tailscale ACL at https://login.tailscale.com/admin/acls
 
 ```json
 {
@@ -67,574 +99,589 @@ Navigate to your Tailscale admin console at https://login.tailscale.com/admin/ac
 }
 ```
 
-### Configuration Explanation
+**Key ACL Settings:**
 
-#### Tag Owners
+- **tagOwners:** Defines who can create devices with specific tags. Tags can own themselves for OAuth workflows (`tag:ci` owns `tag:ci`, `tag:bastion` owns `tag:bastion`)
+- **acls:** Network access rules between tags
+- **ssh:** Tailscale SSH permissions (required for bastion access)
+- **grants:** IP-level access control (optional, can be more restrictive)
 
-```json
-"tagOwners": {
-    "tag:ci":      ["autogroup:admin", "autogroup:owner", "tag:ci"],
-    "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci", "tag:bastion"],
-}
+### Step 3: Add GitHub Secrets
+
+Go to **GitHub → Settings → Secrets and variables → Actions**
+
+Add these secrets:
+
+| Secret Name                 | Value                       |
+| --------------------------- | --------------------------- |
+| `TAILSCALE_OAUTH_CLIENT_ID` | `kA4v...` (Client ID)       |
+| `TAILSCALE_OAUTH_SECRET`    | `tskey-client-...` (Secret) |
+
+### Step 4: Use in Workflow
+
+```yaml
+- uses: lfit/releng-packer-action@main
+  with:
+    mode: build
+    tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+    tailscale_oauth_secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+    tailscale_tags: "tag:ci,tag:bastion"
+    # ... other parameters
 ```
-
-- **`tag:ci`**: Assigned to GitHub Actions runners
-  - Owners: Admins, owners, and **`tag:ci` itself** (self-ownership required for OAuth)
-  - **Important**: `tag:ci` must own itself to allow OAuth clients with this tag to create devices
-- **`tag:bastion`**: Assigned to ephemeral bastion hosts
-  - Owners: Admins, owners, `tag:ci`, and **`tag:bastion` itself** (self-ownership)
-  - This allows both CI runners and bastion hosts to create other bastion instances
-  - Note: `tag:ci` is listed as an owner to allow the workflow to create bastions
-
-#### ACLs (Network Access)
-
-```json
-"acls": [
-    {
-        "action": "accept",
-        "src":    ["autogroup:admin", "tag:ci", "tag:bastion"],
-        "dst":    ["*:*"],
-    },
-]
-```
-
-- Allows admins, CI runners, and bastion hosts to access all services on all hosts
-- Required for bastion to access VexxHost OpenStack network
-
-#### Grants (IP-level Access)
-
-```json
-"grants": [
-    {
-        "src": ["*"],
-        "dst": ["*"],
-        "ip":  ["*"],
-    },
-]
-```
-
-- Allows all IP-level traffic between nodes
-- Simplifies connectivity for the build process
-
-#### SSH Rules (Critical for Action)
-
-```json
-"ssh": [
-    {
-        "action": "accept",
-        "src":    ["autogroup:member", "tag:ci"],
-        "dst":    ["tag:bastion"],
-        "users":  ["root", "ubuntu", "autogroup:nonroot"],
-    },
-]
-```
-
-- **Most Important Rule**: Allows SSH from CI runners to bastion hosts
-- `src`: Who can SSH in (members and CI runners)
-- `dst`: Where they can SSH to (bastion hosts)
-- `users`: Which system users can be accessed
-
-**Without this rule, Packer builds will fail with "tailnet policy does not permit you to SSH to this node"**
-
-#### Auto Approvers (Optional)
-
-```json
-"autoApprovers": {
-    "routes": {
-        "0.0.0.0/0": ["autogroup:admin"],
-        "::/0":      ["autogroup:admin"],
-    },
-    "exitNode": ["autogroup:admin"],
-}
-```
-
-- Allows admins to approve subnet routes and exit nodes
-- Not strictly required for the action, but useful for network management
-
-### 2. Authentication Setup
-
-You have two options for authenticating GitHub Actions with Tailscale: **OAuth clients** (recommended) or **auth keys**. Both methods are supported.
-
-#### Comparison Table
-
-| Feature              | OAuth Client (Recommended)                    | Auth Key                                      |
-| -------------------- | --------------------------------------------- | --------------------------------------------- |
-| **Security**         | ✅ Better - scoped tokens, automatic rotation | ⚠️ Good - static keys require manual rotation |
-| **Audit Trail**      | ✅ Detailed OAuth audit logs                  | ⚠️ Basic key usage logs                       |
-| **Key Rotation**     | ✅ Automatic (tokens expire quickly)          | ❌ Manual rotation required                   |
-| **Setup Complexity** | Medium - requires tag self-ownership config   | Easy - straightforward key generation         |
-| **Best For**         | Production CI/CD pipelines                    | Quick testing, simple setups                  |
-| **Expiration**       | Short-lived tokens (hours)                    | Can be set to never expire                    |
-| **Compromise Risk**  | ✅ Lower - tokens auto-expire                 | ⚠️ Higher - long-lived credentials            |
 
 ---
 
-#### Option A: OAuth Client (Recommended for Production)
+## Method 2: Auth Key Setup (Legacy)
 
-OAuth clients provide better security and are recommended for production CI/CD environments.
+### Step 1: Generate Auth Key
 
-##### Step 1: Create OAuth Client
+1. Go to [Tailscale Admin Console → Settings → Keys](https://login.tailscale.com/admin/settings/keys)
+2. Click **"Generate auth key"**
+3. Configure settings:
+   - **Description:** `GitHub Actions - Bastion Hosts`
+   - ✅ **Ephemeral** - Devices auto-remove when disconnected
+   - ✅ **Reusable** - Use for multiple workflow runs
+   - ✅ **Pre-authorized** - Skip manual approval
+   - **Tags:** `tag:bastion`
+   - **Expiration:** 90 days (or as needed)
+4. Click **"Generate key"**
+5. **IMPORTANT:** Copy the key immediately:
+   - Starts with `tskey-auth-...`
+   - Save as `TAILSCALE_AUTH_KEY`
+   - You won't be able to see it again!
 
-1. Go to **Tailscale OAuth clients page**:
+### Step 2: Configure ACLs
 
-   ```
-   https://login.tailscale.com/admin/settings/oauth
-   ```
+Use the same ACL configuration as OAuth method above.
 
-2. Click **Generate OAuth client**
+### Step 3: Add GitHub Secret
 
-3. Configure the OAuth client:
+Go to **GitHub → Settings → Secrets and variables → Actions**
 
-   - **Description**: `GitHub Actions CI`
-   - **Tags**: Select `tag:ci` (and optionally `tag:bastion`)
-   - **Scopes**: Select the following:
-     - ✅ `devices:read` - Required to list devices
-     - ✅ `devices:write` - Required to register new devices
-     - ⚠️ `all` - Alternative to individual scopes (less secure, not recommended)
+Add secret:
 
-4. Click **Generate client**
+| Secret Name          | Value            |
+| -------------------- | ---------------- |
+| `TAILSCALE_AUTH_KEY` | `tskey-auth-...` |
 
-5. **Save the credentials** (you won't be able to see them again):
-   - **OAuth Client ID**: Starts with `kDN...` or similar
-   - **OAuth Client Secret**: Long secret string
-
-##### Step 2: Store OAuth Credentials as GitHub Secrets
-
-In your GitHub repository:
-
-1. Go to **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Add two secrets:
-
-   | Secret Name                 | Secret Value             | Example                      |
-   | --------------------------- | ------------------------ | ---------------------------- |
-   | `TAILSCALE_OAUTH_CLIENT_ID` | Your OAuth client ID     | `kDNxxxxxxxxxxxxxxxxxxxxxxx` |
-   | `TAILSCALE_OAUTH_SECRET`    | Your OAuth client secret | `tskey-client-xxxxxxxxxxxxx` |
-
-##### Step 3: Workflow Configuration for OAuth
-
-Use this configuration in your workflow (`.github/workflows/packer-vexxhost-bastion-build.yaml`):
+### Step 4: Use in Workflow
 
 ```yaml
-- name: Setup Tailscale VPN
-  uses: tailscale/github-action@v2
+- uses: lfit/releng-packer-action@main
   with:
-    oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-    oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-    tags: tag:ci
-    hostname: github-runner-${{ github.run_id }}
-    args: --ssh --accept-routes --accept-dns=false
+    mode: build
+    tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+    # ... other parameters
 ```
 
-##### Important: Tag Self-Ownership Requirement
+---
 
-**Critical**: When using OAuth clients with tags, you **must** ensure tags own themselves in the ACL `tagOwners` section:
+## ACL Configuration Details
+
+### Understanding tagOwners
+
+Tags must be owned to be assigned. The `tagOwners` section defines who can tag devices:
 
 ```json
 "tagOwners": {
-  "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],  // ← tag:ci must own itself!
+  "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
   "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci", "tag:bastion"]
 }
 ```
 
-**Why?** Tags implicitly own themselves by default. However, when you explicitly define owners in `tagOwners`, tags **lose their implicit self-ownership**. OAuth clients authenticated with a tag need that tag to own itself to create devices.
+- **autogroup:admin** - Tailscale admins
+- **autogroup:owner** - Organization owners
+- **tag:ci** - Devices/clients with `tag:ci` can tag other devices with `tag:bastion`, and can self-own (required for OAuth)
+- **tag:bastion** - Can self-own (required for OAuth workflows)
 
-**Common Error Without Self-Ownership:**
+### Understanding ACLs
 
+Network access control between sources and destinations:
+
+```json
+"acls": [
+  {
+    "action": "accept",
+    "src": ["autogroup:admin", "tag:ci", "tag:bastion"],
+    "dst": ["*:*"]
+  }
+]
 ```
-Status: 400, Message: "requested tags [tag:ci] are invalid or not permitted"
+
+- **src:** Who can initiate connections (admin users, CI runners, bastions)
+- **dst:** What they can connect to (`*:*` = everything)
+- **action:** `accept` allows, `deny` blocks
+
+### Understanding SSH Rules
+
+Tailscale SSH replaces traditional SSH key management:
+
+```json
+"ssh": [
+  {
+    "action": "accept",
+    "src": ["autogroup:member", "tag:ci"],
+    "dst": ["tag:bastion"],
+    "users": ["root", "ubuntu", "autogroup:nonroot"]
+  }
+]
 ```
+
+- **src:** Who can SSH (org members, CI runners)
+- **dst:** Where they can SSH (bastion hosts)
+- **users:** Which users they can SSH as
 
 ---
 
-#### Option B: Auth Key (Simpler Alternative)
+## Verification
 
-Auth keys are simpler to set up but require manual rotation and provide less security.
+### Verify OAuth Client
 
-##### Step 1: Create Auth Key
+1. Go to https://login.tailscale.com/admin/settings/oauth
+2. Find your client: "GitHub Actions - Packer Builds"
+3. Check:
+   - ✅ Status: Active
+   - ✅ Scopes: `auth_keys`
+   - ✅ Tags: `tag:ci`, `tag:bastion`
 
-1. Go to **Tailscale auth keys page**:
+### Verify ACLs
 
+1. Go to https://login.tailscale.com/admin/acls
+2. Click **"Validate"** button
+3. Should show: ✅ "ACL is valid"
+4. No errors about missing tags or invalid syntax
+
+### Test Workflow
+
+1. Run workflow manually
+2. Check **"Setup Tailscale VPN"** step logs
+3. Should see:
    ```
-   https://login.tailscale.com/admin/settings/keys
+   ✅ Connected to Tailscale network
    ```
-
-2. Click **Generate auth key**
-
-3. Configure the key:
-
-   - **Description**: `GitHub Actions CI & Bastion`
-   - **Reusable**: ✅ Yes (allows multiple runners to use it)
-   - **Ephemeral**: ✅ Yes (recommended for CI - devices auto-cleanup)
-   - **Pre-authorized**: ✅ Yes (automatically approves new devices)
-   - **Tags**: Select both:
-     - ✅ `tag:ci`
-     - ✅ `tag:bastion`
-   - **Expiration**: Choose appropriate duration:
-     - 90 days (recommended for production)
-     - 1 year (for long-term testing)
-     - Never (not recommended - rotation required)
-
-4. Click **Generate key**
-
-5. **Copy the auth key** (starts with `tskey-auth-`)
-
-##### Step 2: Store Auth Key as GitHub Secret
-
-In your GitHub repository:
-
-1. Go to **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Add one secret:
-
-   | Secret Name          | Secret Value  | Example                                    |
-   | -------------------- | ------------- | ------------------------------------------ |
-   | `TAILSCALE_AUTH_KEY` | Your auth key | `tskey-auth-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
-
-##### Step 3: Workflow Configuration for Auth Key
-
-**For GitHub Runner (Option B1 - using auth key in workflow):**
-
-```yaml
-- name: Setup Tailscale VPN
-  uses: tailscale/github-action@v2
-  with:
-    authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-    hostname: github-runner-${{ github.run_id }}
-    args: --ssh --accept-routes --accept-dns=false
-```
-
-**Note**: Do NOT include `tags:` parameter - tags come from the auth key itself.
-
-**For Bastion Host (cloud-init, already configured):**
-
-The bastion host uses the same `TAILSCALE_AUTH_KEY` in the cloud-init script:
-
-```yaml
-tailscale up \
---authkey="${TAILSCALE_AUTH_KEY}" \
---hostname="${BASTION_HOSTNAME}" \
---advertise-tags=tag:bastion \
---ssh
-```
+4. Verify devices appear at https://login.tailscale.com/admin/machines
 
 ---
-
-#### Which Method Should I Use?
-
-**Use OAuth Client (Option A) if:**
-
-- ✅ You're running production CI/CD pipelines
-- ✅ You need detailed audit trails
-- ✅ You want automatic credential rotation
-- ✅ You have time to configure tag self-ownership
-
-**Use Auth Key (Option B) if:**
-
-- ✅ You're testing or prototyping
-- ✅ You want the simplest setup
-- ✅ You're okay with manual key rotation
-- ✅ You need long-lived credentials
-
-**Recommendation**: Start with **Auth Key for testing**, then migrate to **OAuth Client for production**.
-
-### 3. Verify Configuration
-
-After applying the ACL configuration, you can test it:
-
-#### Test ACL Syntax
-
-Tailscale will validate your ACL syntax when you save it. Look for:
-
-- ✅ Green checkmark: Configuration is valid
-- ❌ Red error: Fix syntax errors before proceeding
-
-#### Test SSH Access
-
-Once a build runs:
-
-1. Check that bastion appears in Tailscale admin console
-2. Verify it has `tag:bastion`
-3. From your local machine (if you're a member):
-   ```bash
-   tailscale ssh ubuntu@bastion-gh-XXXXXXX
-   ```
 
 ## Troubleshooting
 
-### Error: "requested tags [tag:ci] are invalid or not permitted"
+This section documents common Tailscale failures encountered during development and their solutions, organized by authentication method.
 
-**Affects**: OAuth clients (Option A)
+### OAuth Client Failures
 
-**Cause**: Tag self-ownership is not configured in ACL `tagOwners`
+#### Error: "Status: 403, Message: calling actor does not have enough permissions"
 
-**Solution**:
+**Symptoms:**
 
-1. Go to https://login.tailscale.com/admin/acls
-2. Update `tagOwners` to include self-ownership:
+```
+timeout 5m sudo -E tailscale up ${TAGS_ARG} --authkey=${TAILSCALE_AUTHKEY}
+Status: 403, Message: "calling actor does not have enough permissions to perform this function"
+##[error]Process completed with exit code 1.
+```
+
+**Root Cause:** OAuth client missing required write scope for `auth_keys`
+
+**Solution:**
+
+1. Delete existing OAuth client
+2. Create new OAuth client with:
+   - **Write Scopes:** `auth_keys` (not just read)
+   - **Tags:** `tag:ci`, `tag:bastion`
+3. Update GitHub secret `TAILSCALE_OAUTH_SECRET` with new client secret
+4. Verify in OAuth settings that `auth_keys` has write permission
+
+**Prevention:** Always select write scopes, not just read-only scopes
+
+---
+
+#### Error: "requested tags [tag:bastion] are invalid or not permitted"
+
+**Symptoms:**
+
+```
+backend error: requested tags [tag:bastion] are invalid or not permitted
+2025-10-10 12:02:17,965 - cc_scripts_user.py[WARNING]: Failed to run module scripts_user
+```
+
+**Root Cause:** Tags not properly configured in ACL `tagOwners` or OAuth client
+
+**Solution:**
+
+1. Verify ACL configuration includes self-ownership:
    ```json
    "tagOwners": {
      "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
      "tag:bastion": ["autogroup:admin", "autogroup:owner", "tag:ci", "tag:bastion"]
    }
    ```
-3. Save ACL and wait 30 seconds for propagation
-4. Re-run workflow
+2. Check OAuth client has both tags configured in Tailscale admin console
+3. Validate ACL syntax in Tailscale admin console
+4. Ensure tags can self-own (`tag:ci` in tagOwners for `tag:ci`)
 
-**Why this happens**: When you explicitly define tag owners, tags lose their implicit self-ownership. OAuth clients need tags to own themselves.
-
-**Reference**: See [QUICK_FIX.md](../QUICK_FIX.md) for detailed explanation.
+**Prevention:** Always test ACL changes with "Validate" button before saving
 
 ---
 
-### Error: "requested tags [tag:bastion] are invalid or not permitted"
+#### Error: "An action could not be found at URI" (Setup Failure)
 
-**Affects**: Auth keys (Option B)
+**Symptoms:**
 
-**Cause**: Auth key doesn't have permission to create devices with `tag:bastion`
-
-**Solution**:
-
-1. Check that `tag:bastion` is listed in the auth key's tags when you created it
-2. Verify `tagOwners` in ACL includes both:
-   - `tag:ci` as an owner of `tag:bastion`
-   - `tag:bastion` as an owner of itself (self-ownership)
-3. If auth key is missing tags, create a new auth key with correct permissions:
-   - Go to https://login.tailscale.com/admin/settings/keys
-   - Create new key with both `tag:ci` AND `tag:bastion` selected
-   - Update `TAILSCALE_AUTH_KEY` secret in GitHub
-
-### Error: "tailnet policy does not permit you to SSH to this node"
-
-**Cause**: Missing or incorrect SSH rule in ACL
-
-**Solution**:
-
-1. Verify the SSH rule is present in your ACL
-2. Ensure `tag:ci` is in the `src` array
-3. Ensure `tag:bastion` is in the `dst` array
-4. Save the ACL and wait ~30 seconds for it to propagate
-
-### Error: "SSH_AUTH_SOCK is not set"
-
-**Cause**: SSH agent not running (should be handled by action)
-
-**Solution**:
-
-- This should be automatically handled by the action
-- If it persists, check the "Setup SSH agent" step in the workflow logs
-
-### Bastion doesn't appear in Tailscale
-
-**Cause**: Bastion failed to join tailnet or cloud-init failed
-
-**Solution**:
-
-1. **Check OpenStack console logs**:
-
-   ```bash
-   openstack console log show bastion-gh-XXXXXX
-   ```
-
-   Look for Tailscale installation or connection errors
-
-2. **Verify authentication secrets** (depending on your auth method):
-
-   **If using OAuth (Option A)**:
-
-   - Verify `TAILSCALE_OAUTH_CLIENT_ID` secret exists
-   - Verify `TAILSCALE_OAUTH_SECRET` secret exists
-   - Check OAuth client has `devices:write` scope
-   - Ensure OAuth client has `tag:bastion` assigned
-
-   **If using auth key (Option B)**:
-
-   - Verify `TAILSCALE_AUTH_KEY` secret exists in GitHub
-   - Ensure auth key has both `tag:ci` AND `tag:bastion` tags
-   - Check auth key hasn't expired
-   - Verify auth key is marked as "Reusable"
-
-3. **Check network connectivity**:
-
-   - Ensure bastion can reach Tailscale coordination servers (outbound HTTPS)
-   - VexxHost network should allow outbound connections to `*.tailscale.com`
-
-4. **Review cloud-init logs on bastion** (if accessible):
-   ```bash
-   # SSH to bastion if reachable via OpenStack network
-   cat /var/log/cloud-init-output.log
-   cat /var/log/bastion-init.log
-   ```
-
-### Error: "OAuth client does not have permission"
-
-**Affects**: OAuth clients (Option A)
-
-**Cause**: OAuth client missing required scopes or tag permissions
-
-**Solution**:
-
-1. Go to https://login.tailscale.com/admin/settings/oauth
-2. Find your OAuth client
-3. Verify it has:
-   - **Scopes**: `devices:read`, `devices:write`
-   - **Tags**: `tag:ci` (and optionally `tag:bastion`)
-4. If missing permissions, you may need to:
-   - Delete the old OAuth client
-   - Create a new one with correct permissions
-   - Update GitHub secrets with new credentials
-
-### Error: Auth key has expired
-
-**Affects**: Auth keys (Option B)
-
-**Cause**: Auth key reached its expiration date
-
-**Solution**:
-
-1. Go to https://login.tailscale.com/admin/settings/keys
-2. Create a new auth key (see Option B setup instructions)
-3. Update `TAILSCALE_AUTH_KEY` secret in GitHub repository
-4. Re-run the workflow
-
-### Switching Between Auth Methods
-
-**From Auth Key → OAuth Client**:
-
-1. Follow "Option A: OAuth Client" setup instructions
-2. Create OAuth client and store credentials in GitHub secrets
-3. Update workflow to use `oauth-client-id` and `oauth-secret` parameters
-4. **Important**: Add tag self-ownership to ACL `tagOwners`
-5. You can keep the auth key for bastion or switch that to OAuth too
-
-**From OAuth Client → Auth Key**:
-
-1. Follow "Option B: Auth Key" setup instructions
-2. Create auth key and store in GitHub secrets
-3. Update workflow to use `authkey` parameter (remove `tags:` line)
-4. Auth key method doesn't require tag self-ownership (but it doesn't hurt to keep it)
-
-## Security Considerations
-
-### Principle of Least Privilege
-
-The provided configuration is permissive to simplify setup. For production:
-
-1. **Restrict SSH Users**: Instead of allowing all users, specify only what's needed:
-
-   ```json
-   "users": ["ubuntu", "root"]  // Remove autogroup:nonroot if not needed
-   ```
-
-2. **Limit Network Access**: Instead of `*:*`, specify only required ports:
-
-   ```json
-   "dst": ["tag:bastion:22,443"]  // Only SSH and HTTPS
-   ```
-
-3. **Separate Environments**: Use different tag sets for dev/staging/prod:
-   ```json
-   "tag:ci-dev", "tag:ci-prod", "tag:bastion-dev", "tag:bastion-prod"
-   ```
-
-### Authentication Management
-
-#### OAuth Client Best Practices (Option A)
-
-- **Scope properly**: Only grant necessary scopes (`devices:read`, `devices:write`)
-- **Monitor usage**: Check Tailscale admin console for OAuth client activity
-- **Rotate secrets**: If compromised, regenerate OAuth client and update GitHub secrets
-- **Tag ownership**: Always ensure tags have self-ownership in ACL
-- **Audit logs**: Review OAuth client usage in Tailscale admin console regularly
-
-#### Auth Key Best Practices (Option B)
-
-- **Rotate regularly**: Create new auth keys every 90 days
-- **Use ephemeral keys**: Enable ephemeral option for automatic device cleanup
-- **Pre-authorize**: Enable pre-authorization to avoid manual approval
-- **Set expiration**: Don't use "never expire" - set reasonable expiration dates
-- **Monitor usage**: Check Tailscale admin console for active devices
-- **Revoke compromised keys**: Immediately revoke and rotate if key is exposed
-- **Tag assignment**: Always include both `tag:ci` and `tag:bastion` tags
-
-### Audit Logging
-
-Enable Tailscale audit logging to track:
-
-- Device connections/disconnections
-- SSH sessions
-- ACL changes
-- Auth key usage
-
-## Reference Links
-
-### General Documentation
-
-- [Tailscale ACL Documentation](https://tailscale.com/kb/1018/acls)
-- [Tailscale SSH Documentation](https://tailscale.com/kb/1193/tailscale-ssh)
-- [Tailscale Policy Syntax](https://tailscale.com/kb/1337/policy-syntax)
-- [Tailscale Tags Documentation](https://tailscale.com/kb/1068/tags)
-
-### Authentication Methods
-
-- [OAuth Clients Documentation](https://tailscale.com/kb/1215/oauth-clients)
-- [Auth Keys Documentation](https://tailscale.com/kb/1085/auth-keys)
-- [Tailscale GitHub Action](https://github.com/tailscale/github-action)
-
-### Troubleshooting Resources
-
-- [QUICK_FIX.md](../QUICK_FIX.md) - Fast fix for OAuth tag permission issues
-- [TAILSCALE_FIX.md](../TAILSCALE_FIX.md) - Detailed troubleshooting guide
-
-## Example: Adding to Existing ACL
-
-If you already have an ACL configuration, merge the sections. **Important**: Include self-ownership for tags!
-
-```json
-{
-  // Your existing tagOwners
-  "tagOwners": {
-    "tag:existing": ["autogroup:admin"],
-    // Add these (note self-ownership):
-    "tag:ci": ["autogroup:admin", "autogroup:owner", "tag:ci"],
-    "tag:bastion": [
-      "autogroup:admin",
-      "autogroup:owner",
-      "tag:ci",
-      "tag:bastion"
-    ]
-  },
-
-  // Your existing acls
-  "acls": [
-    // ... your existing rules ...
-    // Add this:
-    {
-      "action": "accept",
-      "src": ["tag:ci", "tag:bastion"],
-      "dst": ["*:*"]
-    }
-  ],
-
-  // Add or merge with existing ssh section
-  "ssh": [
-    // ... your existing SSH rules ...
-    // Add this:
-    {
-      "action": "accept",
-      "src": ["tag:ci"],
-      "dst": ["tag:bastion"],
-      "users": ["root", "ubuntu", "autogroup:nonroot"]
-    }
-  ]
-}
+```
+##[error]An action could not be found at the URI
+'https://api.github.com/repos/tailscale/github-action/tarball/9b0941a...'
 ```
 
-## Support
+**Root Cause:** Invalid GitHub Action commit SHA or tag
 
-If you encounter issues:
+**Solution:**
 
-1. Check Tailscale admin console for device status
-2. Review workflow logs for error messages
-3. Verify ACL syntax in Tailscale admin console
-4. File an issue in this repository with logs
+1. Verify commit SHA exists in repository:
+   ```bash
+   git ls-remote https://github.com/tailscale/github-action.git
+   ```
+2. Use valid commit SHA: `6cae46e2d796f265265cfcf628b72a32b4d7cade` (v3.3.0)
+3. Update workflow to use correct reference
+4. Consider using tagged release instead of SHA
+
+**Prevention:** Use stable version tags (`v3`) instead of specific commits
+
+---
+
+### Auth Key Failures
+
+#### Error: "tailnet policy does not permit you to SSH to this node"
+
+**Symptoms:**
+
+```
+Checking bastion logs:
+tailscale: tailnet policy does not permit you to SSH to this node
+Connection closed by 100.114.132.117 port 22
+```
+
+**Root Cause:** Missing or incorrect SSH rules in Tailscale ACL
+
+**Solution:**
+
+1. Add SSH rules to ACL:
+   ```json
+   "ssh": [
+     {
+       "action": "accept",
+       "src": ["autogroup:member", "tag:ci"],
+       "dst": ["tag:bastion"],
+       "users": ["root", "ubuntu", "autogroup:nonroot"]
+     }
+   ]
+   ```
+2. Ensure source (`src`) includes `tag:ci` for GitHub runners
+3. Ensure destination (`dst`) includes `tag:bastion` for bastion hosts
+4. Validate ACL and save changes
+5. Wait 30 seconds for ACL propagation
+
+**Prevention:** Include SSH rules when initially configuring ACLs
+
+---
+
+#### Error: "ACL validation failed: only tag:name, group:name, ... are allowed"
+
+**Symptoms:**
+
+```
+Error: tagOwners["tag:ci"]: "client:klxjxddgd511cntrl":
+only tag:name, group:name, role autogroups, or user@domain are allowed
+```
+
+**Root Cause:** Attempting to add OAuth client ID directly to `tagOwners`
+
+**Solution:**
+
+1. Remove client IDs from `tagOwners`
+2. Use only valid owner types:
+   - `autogroup:admin`
+   - `autogroup:owner`
+   - `tag:ci` (for self-ownership)
+   - User emails (`user@domain.com`)
+3. OAuth clients inherit permissions via tags, not direct ownership
+4. Validate ACL syntax
+
+**Prevention:** OAuth clients don't appear in `tagOwners` - use tag self-ownership instead
+
+---
+
+### Network & Connectivity Failures
+
+#### Error: Bastion Ready Marker Not Found
+
+**Symptoms:**
+
+```
+Waiting for bastion ready marker... (attempt 24/24)
+⚠️ Bastion reachable but ready marker not found, proceeding anyway...
+```
+
+**Root Cause:**
+
+- Cloud-init failed to complete
+- Tailscale failed to start on bastion
+- `/tmp/bastion-ready` marker file not created
+
+**Solution:**
+
+1. Check cloud-init logs on bastion:
+   ```bash
+   openstack console log show bastion-gh-<run-id> | tail -100
+   ```
+2. Look for Tailscale startup errors
+3. Verify bastion instance has outbound internet access
+4. Check OpenStack network security groups allow HTTPS (443)
+5. Increase `BASTION_WAIT_TIMEOUT` if bastion is slow to boot
+
+**Common Cloud-Init Failures:**
+
+- Network not ready before Tailscale setup
+- Missing dependencies (curl, ca-certificates)
+- Tailscale package download timeout
+- OAuth/auth key credential errors
+
+**Prevention:**
+
+- Use cloud-init with proper dependency ordering
+- Add retry logic for network-dependent operations
+- Set reasonable timeouts (5+ minutes)
+
+---
+
+#### Error: Bastion Tailscale IP Not Returned
+
+**Symptoms:**
+
+```
+=== Bastion Status ===
+Hostname: bastion-gh-18406355108
+Tailscale IP:
+======================
+```
+
+**Root Cause:**
+
+- Bastion joined Tailscale but IP not propagated yet
+- ACL rules preventing IP assignment
+- Tailscale daemon not fully started
+
+**Solution:**
+
+1. Wait 30-60 seconds for IP assignment
+2. Check ACL grants allow IP assignment:
+   ```json
+   "grants": [
+     {
+       "src": ["*"],
+       "dst": ["*"],
+       "ip": ["*"]
+     }
+   ]
+   ```
+3. Verify bastion in Tailscale admin console shows IP
+4. Add retry logic to wait for IP assignment
+5. Check `tailscale status` on bastion shows IP address
+
+**Prevention:** Add sleep/retry after bastion joins network
+
+---
+
+### Debug Mode
+
+Enable debug logging to diagnose Tailscale issues:
+
+**In Workflow:**
+
+```yaml
+env:
+  TS_DEBUG: "1"
+```
+
+**Debug Output Shows:**
+
+- Detailed connection attempts
+- ACL policy evaluation
+- SSH authentication flow
+- Network route propagation
+
+**To Enable in Action:**
+Add environment variable before Tailscale setup:
+
+```bash
+export TS_DEBUG=1
+```
+
+---
+
+### Validation Checklist
+
+Before troubleshooting, verify these basics:
+
+#### ✅ OAuth Client Configuration
+
+- [ ] OAuth client exists in Tailscale admin console
+- [ ] Client has `auth_keys` **write** scope (not just read)
+- [ ] Client configured with tags: `tag:ci`, `tag:bastion`
+- [ ] Client status is "Active"
+- [ ] GitHub secrets contain correct Client ID and Secret
+
+#### ✅ Auth Key Configuration (if using)
+
+- [ ] Auth key not expired
+- [ ] Key has "Ephemeral" enabled
+- [ ] Key has "Reusable" enabled
+- [ ] Key has "Pre-authorized" enabled
+- [ ] Key tagged with `tag:bastion`
+- [ ] GitHub secret contains correct auth key
+
+#### ✅ ACL Configuration
+
+- [ ] ACL validated successfully (no errors)
+- [ ] `tagOwners` includes self-ownership for tags
+- [ ] `acls` allow traffic between `tag:ci` and `tag:bastion`
+- [ ] `ssh` rules permit `tag:ci` → `tag:bastion`
+- [ ] `grants` allow IP assignment (if using grants)
+
+#### ✅ Network Configuration
+
+- [ ] Bastion instance has outbound internet (HTTPS/443)
+- [ ] OpenStack security groups allow required ports
+- [ ] Cloud-init has time to complete (5+ min timeout)
+- [ ] GitHub runner can reach Tailscale API
+
+#### ✅ GitHub Secrets
+
+- [ ] Secrets exist in repository settings
+- [ ] Secret names match workflow inputs exactly
+- [ ] Secrets not accidentally wrapped in quotes
+- [ ] Secrets updated after regenerating credentials
+
+---
+
+### Common Log Patterns
+
+**Successful OAuth Connection:**
+
+```
+✅ Connected to Tailscale network
+Tailscale IP: 100.110.229.60
+```
+
+**Successful Auth Key Connection:**
+
+```
+Success.
+100.91.88.61    github-runner-18405791203
+```
+
+**Failed OAuth Permissions:**
+
+```
+Status: 403, Message: "calling actor does not have enough permissions"
+```
+
+**Failed Tag Authorization:**
+
+```
+backend error: requested tags [tag:bastion] are invalid or not permitted
+```
+
+**Failed SSH Authorization:**
+
+```
+tailscale: tailnet policy does not permit you to SSH to this node
+Connection closed by X.X.X.X port 22
+```
+
+---
+
+### Getting Help
+
+If issues persist after following troubleshooting steps:
+
+1. **Check Workflow Logs:**
+
+   - Download logs from GitHub Actions
+   - Look for specific error messages
+   - Note timing of failures (setup vs. runtime)
+
+2. **Check Bastion Console Logs:**
+
+   ```bash
+   openstack console log show bastion-gh-<run-id> > bastion.log
+   ```
+
+3. **Verify Tailscale Admin Console:**
+
+   - Check if devices appear in machine list
+   - Review ACL test results
+   - Check OAuth client activity logs
+
+4. **Test Locally:**
+
+   - Try connecting with same credentials locally
+   - Verify OAuth client works outside GitHub Actions
+   - Test SSH rules manually
+
+5. **Open an Issue:**
+   - Include workflow logs
+   - Include bastion console logs
+   - Specify authentication method (OAuth vs auth key)
+   - Share ACL configuration (redact sensitive info)
+
+---
+
+## Security Best Practices
+
+### OAuth Secrets
+
+- ✅ Store in GitHub encrypted secrets
+- ✅ Never commit to repository
+- ✅ Rotate every 90 days
+- ✅ Use separate OAuth clients for prod/dev
+
+### Auth Keys
+
+- ✅ Use ephemeral keys (auto-cleanup)
+- ✅ Set expiration (90 days max recommended)
+- ✅ Regenerate regularly
+- ✅ Pre-authorize to avoid manual steps
+
+### ACL Configuration
+
+- ✅ Use principle of least privilege
+- ✅ Restrict SSH access to required tags only
+- ✅ Regular audit of tag assignments
+- ✅ Monitor device connections
+
+---
+
+## Comparison: OAuth vs Auth Keys
+
+| Feature                      | OAuth Client | Auth Key   |
+| ---------------------------- | ------------ | ---------- |
+| **Setup Complexity**         | Medium       | Simple     |
+| **Security**                 | ✅ Better    | ⚠️ Good    |
+| **Token Rotation**           | ✅ Automatic | ⚠️ Manual  |
+| **Audit Logging**            | ✅ Detailed  | Basic      |
+| **Scope Control**            | ✅ Granular  | Fixed      |
+| **Recommended For**          | Production   | Testing    |
+| **Tailscale Recommendation** | ✅ Preferred | Deprecated |
+
+---
+
+## Additional Resources
+
+- [Tailscale OAuth Clients](https://tailscale.com/kb/1215/oauth-clients)
+- [Tailscale ACL Documentation](https://tailscale.com/kb/1018/acls)
+- [Tailscale ACL Policy Syntax](https://tailscale.com/kb/1337/policy-syntax)
+- [Tailscale SSH](https://tailscale.com/kb/1193/tailscale-ssh)
+- [Tailscale Tags](https://tailscale.com/kb/1068/acl-tags)
+
+---
+
+**Need Help?** Open an issue or consult the [main documentation](README.md).

@@ -17,6 +17,7 @@ gerrit-<event-type>-<description>.yaml
 ```
 
 Where:
+
 - **gerrit**: Required prefix - all workflows must contain "gerrit" in the filename
 - **event-type**: The Gerrit event type (e.g., "verify", "merge")
 - **description**: Optional descriptive name (e.g., "packer", "build", etc.)
@@ -24,6 +25,7 @@ Where:
 ### Event Types
 
 1. **Verify Events** (patchset-created, comment-added with verify vote)
+
    - Triggered when a new patchset is uploaded or verification is requested
    - Workflow filenames must contain: `gerrit` AND `verify`
    - Example: `gerrit-packer-verify.yaml`
@@ -38,6 +40,7 @@ Where:
 Workflows can be placed in two locations:
 
 1. **Repository-specific workflows** (`.github/workflows/` in the target repo)
+
    - Triggered for events in that specific repository
    - Most common use case
 
@@ -58,44 +61,44 @@ on:
   workflow_dispatch:
     inputs:
       GERRIT_BRANCH:
-        description: 'Branch that change is against'
+        description: "Branch that change is against"
         required: true
         type: string
       GERRIT_CHANGE_ID:
-        description: 'The ID for the change'
+        description: "The ID for the change"
         required: true
         type: string
       GERRIT_CHANGE_NUMBER:
-        description: 'The Gerrit number'
+        description: "The Gerrit number"
         required: true
         type: string
       GERRIT_CHANGE_URL:
-        description: 'URL to the change'
+        description: "URL to the change"
         required: true
         type: string
       GERRIT_EVENT_TYPE:
-        description: 'Type of Gerrit event'
+        description: "Type of Gerrit event"
         required: true
         type: string
       GERRIT_PATCHSET_NUMBER:
-        description: 'The patch number for the change'
+        description: "The patch number for the change"
         required: true
         type: string
       GERRIT_PATCHSET_REVISION:
-        description: 'The revision sha'
+        description: "The revision sha"
         required: true
         type: string
       GERRIT_PROJECT:
-        description: 'Project in Gerrit'
+        description: "Project in Gerrit"
         required: true
         type: string
       GERRIT_REFSPEC:
-        description: 'Gerrit refspec of change'
+        description: "Gerrit refspec of change"
         required: true
         type: string
       # For required workflows in .github repo only:
       TARGET_REPO:
-        description: 'The target GitHub repository needing the required workflow'
+        description: "The target GitHub repository needing the required workflow"
         required: false
         type: string
 ```
@@ -106,7 +109,7 @@ To work with the actual change/patchset, workflows must fetch the Gerrit refspec
 
 ```yaml
 - name: Checkout repository
-  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
   with:
     repository: ${{ github.repository }}
     ref: ${{ inputs.GERRIT_BRANCH }}
@@ -123,7 +126,7 @@ For required workflows in the `.github` repo, use `TARGET_REPO` input:
 
 ```yaml
 - name: Checkout target repository
-  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+  uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
   with:
     repository: ${{ inputs.TARGET_REPO }}
     ref: ${{ inputs.GERRIT_BRANCH }}
@@ -147,9 +150,7 @@ The `gerrit-to-platform` system uses the following logic to discover workflows:
 5. Dispatch each matching workflow with Gerrit event inputs
 
 For the `.github` magic repo:
-1-3. Same as above
-4. Filter FOR workflows containing "required"
-5. Add `TARGET_REPO` input and dispatch
+1-3. Same as above 4. Filter FOR workflows containing "required" 5. Add `TARGET_REPO` input and dispatch
 
 ## Example Workflows
 
@@ -172,7 +173,7 @@ jobs:
       changed_files: ${{ steps.changes.outputs.all_changed_files }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.GERRIT_BRANCH }}
           fetch-depth: 0
@@ -184,7 +185,7 @@ jobs:
 
       - name: Detect changed packer files
         id: changes
-        uses: tj-actions/changed-files@c3a1bb2c992d77180ae65be6ae6c166cf40f857c  # v45.0.3
+        uses: tj-actions/changed-files@c3a1bb2c992d77180ae65be6ae6c166cf40f857c # v45.0.3
         with:
           files: |
             templates/**/*.pkr.hcl
@@ -214,7 +215,7 @@ on:
         type: string
       # ... other Gerrit inputs ...
   schedule:
-    - cron: '0 0 1 * *'  # Monthly rebuild
+    - cron: "0 0 1 * *" # Monthly rebuild
 
 jobs:
   setup-matrix:
@@ -260,6 +261,7 @@ To enable Gerrit-to-GitHub integration in a repository:
 ### 2. Gerrit Configuration
 
 The Gerrit server must be configured with:
+
 - `gerrit-to-platform` hook installed
 - Replication plugin configured to mirror to GitHub
 - Hook must be configured with GitHub token and repository mapping
@@ -287,6 +289,7 @@ TAILSCALE_AUTHKEY
 ### 4. Workflow Files
 
 Copy example workflows from this repository:
+
 - `examples/workflows/gerrit-packer-verify.yaml` → `.github/workflows/`
 - `examples/workflows/gerrit-packer-merge.yaml` → `.github/workflows/`
 
@@ -352,5 +355,6 @@ gh workflow run gerrit-packer-verify.yaml \
 ## Support
 
 For issues or questions:
+
 - File an issue in the [releng-packer-action repository](https://github.com/lfit/releng-packer-action)
 - Contact the LF Release Engineering team

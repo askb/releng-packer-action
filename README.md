@@ -1,187 +1,201 @@
-# VexxHost Tailscale Bastion MVP - Automated Packer Builds
+# Packer GitHub Action with Tailscale Bastion
 
 [![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Packer](https://img.shields.io/badge/Packer-1.11.2-02A8EF?logo=packer&logoColor=white)](https://www.packer.io/)
 [![Tailscale](https://img.shields.io/badge/Tailscale-VPN-00C896?logo=tailscale&logoColor=white)](https://tailscale.com/)
-[![VexxHost](https://img.shields.io/badge/VexxHost-Cloud-FF6B6B)](https://vexxhost.com/)
 
-Automated Packer image builds on VexxHost OpenStack cloud using GitHub Actions with **ephemeral Tailscale bastion hosts** for secure, zero-configuration connectivity.
+Reusable GitHub Action for Packer image validation and builds on OpenStack clouds using ephemeral Tailscale bastion hosts for secure connectivity.
 
-## 🌟 Key Features
+## Features
 
-- ✅ **Fully Automated** - No manual intervention required
-- ✅ **Secure VPN** - Tailscale mesh network encryption
-- ✅ **Ephemeral Bastion** - Auto-created and destroyed per build
-- ✅ **Zero SSH Config** - Tailscale SSH handles authentication
-- ✅ **OpenStack Native** - Full VexxHost integration
-- ✅ **Cost Effective** - ~$0.02 per build, < $1/month
+- ✅ **Fully Automated** - Zero-configuration bastion deployment
+- ✅ **Secure VPN** - Tailscale mesh network with OAuth support
+- ✅ **Ephemeral Bastion** - Auto-provisioned and cleaned up per build
+- ✅ **Gerrit Integration** - Triggered by Gerrit verify/merge events
+- ✅ **Matrix Builds** - Parallel builds for multiple OS/platform combinations
+- ✅ **OpenStack Native** - Works with any OpenStack cloud provider
 - ✅ **Production Ready** - Comprehensive error handling and logging
-- ✅ **Developer Friendly** - Pre-commit hooks and validation tools
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-GitHub Actions Runner  ←→  [Tailscale VPN]  ←→  Bastion (VexxHost)
+GitHub Actions Runner  ←→  [Tailscale VPN]  ←→  Bastion (OpenStack)
          ↓                                              ↓
     Packer Build  ────────────────────────→  Target Instances
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed architecture and workflow stages.
+The action creates an ephemeral bastion host on OpenStack that joins your Tailscale network, enabling secure SSH connectivity for Packer builds without exposing instances to the internet.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- ✅ GitHub repository with Packer files
-- ✅ VexxHost account with OpenStack access
-- ✅ Tailscale account (free tier works)
+- GitHub repository with Packer templates
+- OpenStack cloud account (VexxHost, etc.)
+- Tailscale account (free tier sufficient)
 
-### 1. Get Tailscale Credentials
+### 1. Configure Tailscale
 
-#### Create OAuth Key
+Create OAuth client (recommended) or auth key. See [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) for detailed instructions.
 
-1. Go to [Tailscale Settings → OAuth Clients](https://login.tailscale.com/admin/settings/oauth)
-2. Click **Generate OAuth client**
-3. Settings:
-   - **Scopes:** `devices:write`
-   - **Tags:** `tag:ci`
-4. Copy the client secret → `TAILSCALE_OAUTH_KEY`
+**Quick setup:**
 
-#### Create Auth Key
+1. Go to [Tailscale OAuth Clients](https://login.tailscale.com/admin/settings/oauth)
+2. Generate OAuth client with `auth_keys` scope and tags `tag:ci`, `tag:bastion`
+3. Copy client ID and secret
 
-1. Go to [Tailscale Settings → Auth Keys](https://login.tailscale.com/admin/settings/keys)
-2. Click **Generate auth key**
-3. Settings:
-   - ✅ **Ephemeral** (auto-cleanup)
-   - ✅ **Reusable** (use for multiple workflows)
-   - ✅ **Pre-authorized** (no approval needed)
-   - **Tags:** `tag:bastion`
-4. **Recommended**: Create OAuth client (see [docs/TAILSCALE_SETUP.md](docs/TAILSCALE_SETUP.md))
-   - Or legacy: Copy the auth key → `TAILSCALE_AUTH_KEY`
+### 2. Configure GitHub Secrets
 
-### 2. Get VexxHost Credentials
+Add these secrets to your repository:
 
-1. Log in to [VexxHost Dashboard](https://console.vexxhost.net)
-2. Navigate to **API Access** or **Project → API Access**
-3. Download OpenStack RC file (v3) or note these values:
+| Secret                      | Description                 |
+| --------------------------- | --------------------------- |
+| `TAILSCALE_OAUTH_CLIENT_ID` | OAuth client ID             |
+| `TAILSCALE_OAUTH_SECRET`    | OAuth client secret         |
+| `OPENSTACK_AUTH_URL`        | OpenStack auth endpoint     |
+| `OPENSTACK_USERNAME`        | OpenStack username          |
+| `OPENSTACK_PASSWORD`        | OpenStack password          |
+| `OPENSTACK_PROJECT_ID`      | OpenStack project/tenant ID |
+| `OPENSTACK_REGION`          | OpenStack region name       |
+| `OPENSTACK_NETWORK`         | OpenStack network ID        |
 
-```bash
-OS_AUTH_URL=https://auth.vexxhost.net/v3
-OS_PROJECT_ID=your-project-id
-OS_PROJECT_NAME=your-project-name
-OS_USERNAME=your-username
-OS_PASSWORD=your-password
-OS_REGION_NAME=ca-ymq-1  # or your region
+### 3. Use the Action
+
+Create `.github/workflows/packer-verify.yaml`:
+
+```yaml
+name: Packer Verify
+
+on:
+  pull_request:
+    paths:
+      - "packer/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: lfit/releng-packer-action@v1
+        with:
+          mode: validate
+          packer_template: templates/builder.pkr.hcl
+          packer_vars: vars/ubuntu-22.04.pkrvars.hcl
 ```
 
-### 3. Configure GitHub Secrets
+For build workflows, see [examples/workflows/](examples/workflows/).
 
-Go to **Settings → Secrets and variables → Actions → New repository secret**
+## Action Inputs
 
-Required secrets:
+| Input                       | Description                           | Required         | Default      |
+| --------------------------- | ------------------------------------- | ---------------- | ------------ |
+| `mode`                      | Operation mode: `validate` or `build` | Yes              | `validate`   |
+| `packer_template`           | Path to Packer template file          | Yes              | -            |
+| `packer_vars`               | Path to Packer vars file or filter    | No               | -            |
+| `tailscale_oauth_client_id` | Tailscale OAuth client ID             | No†              | -            |
+| `tailscale_oauth_secret`    | Tailscale OAuth secret                | No†              | -            |
+| `tailscale_auth_key`        | Tailscale auth key (legacy)           | No†              | -            |
+| `openstack_*`               | OpenStack credentials                 | Yes (build mode) | -            |
+| `bastion_*`                 | Bastion configuration                 | No               | See defaults |
 
-| Secret Name             | Description          | Example                        |
-| ----------------------- | -------------------- | ------------------------------ |
-| `TAILSCALE_OAUTH_KEY`   | OAuth client secret  | `tskey-client-...`             |
-| `TAILSCALE_AUTH_KEY`    | Auth key for bastion | `tskey-auth-...`               |
-| `VEXXHOST_AUTH_URL`     | OpenStack endpoint   | `https://auth.vexxhost.net/v3` |
-| `VEXXHOST_PROJECT_ID`   | Project ID           | `abc123...`                    |
-| `VEXXHOST_PROJECT_NAME` | Project name         | `my-project`                   |
-| `VEXXHOST_USERNAME`     | Your username        | `user@example.com`             |
-| `VEXXHOST_PASSWORD`     | Your password        | `your-password`                |
-| `VEXXHOST_REGION`       | Region code          | `ca-ymq-1`                     |
+† Either OAuth credentials or auth key required for `build` mode
 
-Optional secrets (if using existing packer templates):
+See [action.yaml](action.yaml) for complete input reference.
 
-| Secret Name       | Description                          |
-| ----------------- | ------------------------------------ |
-| `CLOUD_ENV_B64`   | Base64 encoded Packer cloud env      |
-| `CLOUDS_YAML_B64` | Base64 encoded OpenStack clouds.yaml |
+## Action Outputs
 
-### 4. Run Your First Build
+| Output              | Description                       |
+| ------------------- | --------------------------------- |
+| `validation_status` | Validation result (passed/failed) |
+| `build_status`      | Build result (success/failure)    |
+| `image_name`        | Name of built image               |
+| `bastion_ip`        | Tailscale IP of bastion host      |
 
-1. Go to GitHub → **Actions** tab
-2. Select **Packer Build with VexxHost Tailscale Bastion** workflow
-3. Click **Run workflow**
-4. Configure options (or use defaults):
-   - **Packer template:** `builder.pkr.hcl`
-   - **Packer vars:** `ubuntu-22.04`
-   - **Bastion flavor:** `v3-standard-2`
-   - **Bastion image:** `Ubuntu 22.04`
-5. Click **Run workflow** (green button)
+## Examples
 
-## Workflow Details
+### Gerrit Verify (Validation Only)
 
-### Architecture
+Validates Packer templates when changes are submitted to Gerrit:
 
+```yaml
+name: Packer Verify
+
+on:
+  repository_dispatch:
+    types: [gerrit-patchset-created, gerrit-change-updated]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lfreleng-actions/gerrit-checkout-action@v1
+        with:
+          repository: ${{ github.event.client_payload.GERRIT_PROJECT }}
+          ref: ${{ github.event.client_payload.GERRIT_PATCHSET_REVISION }}
+
+      - uses: lfit/releng-packer-action@v1
+        with:
+          mode: validate
+          packer_template: templates/*.pkr.hcl
+          syntax_only: true
 ```
-GitHub Actions Runner
-    ↓ (Tailscale VPN)
-Bastion Host (VexxHost)
-    ↓ (Internal network)
-Build Targets (VexxHost)
+
+### Gerrit Merge (Build Images)
+
+Builds images when changes are merged in Gerrit:
+
+```yaml
+name: Packer Build
+
+on:
+  repository_dispatch:
+    types: [gerrit-change-merged]
+  schedule:
+    - cron: "0 2 1 * *" # Monthly rebuild
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - uses: lfreleng-actions/gerrit-checkout-action@v1
+
+      - id: generate
+        run: |
+          # Generate matrix based on changed files
+          matrix=$(python scripts/generate-matrix.py)
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+  build:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: lfreleng-actions/gerrit-checkout-action@v1
+
+      - uses: lfit/releng-packer-action@v1
+        with:
+          mode: build
+          packer_template: ${{ matrix.template }}
+          packer_vars: ${{ matrix.vars }}
+          tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          tailscale_oauth_secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          openstack_auth_url: ${{ secrets.OPENSTACK_AUTH_URL }}
+          openstack_username: ${{ secrets.OPENSTACK_USERNAME }}
+          openstack_password: ${{ secrets.OPENSTACK_PASSWORD }}
+          openstack_project_id: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          openstack_region: ${{ secrets.OPENSTACK_REGION }}
+          openstack_network: ${{ secrets.OPENSTACK_NETWORK }}
 ```
 
-### Process Flow
-
-1. **Setup** (30s)
-
-   - Checkout code
-   - Connect to Tailscale
-   - Install OpenStack CLI
-
-2. **Bastion Launch** (60-90s)
-
-   - Create cloud-init script
-   - Launch VexxHost instance
-   - Wait for Tailscale connection
-
-3. **Packer Build** (5-15 min)
-
-   - Initialize Packer plugins
-   - Validate templates
-   - Build images via bastion
-
-4. **Cleanup** (30s)
-   - Upload logs/artifacts
-   - Delete bastion instance
-   - Disconnect Tailscale
-
-### Workflow Inputs
-
-| Input             | Description          | Default           |
-| ----------------- | -------------------- | ----------------- |
-| `packer_template` | Template to build    | `builder.pkr.hcl` |
-| `packer_vars`     | Vars file filter     | `ubuntu-22.04`    |
-| `bastion_flavor`  | Instance flavor      | `v3-standard-2`   |
-| `bastion_image`   | Base image           | `Ubuntu 22.04`    |
-| `debug_mode`      | Enable debug logging | `false`           |
-
-## Repository Structure
-
-```
-packer-jobs/
-├── .github/
-│   └── workflows/
-│       └── packer-vexxhost-bastion-build.yaml
-├── .pre-commit-config.yaml
-├── .yamllint.conf
-├── README.md
-├── docs/
-│   ├── QUICK_START.md
-│   └── TROUBLESHOOTING.md
-└── packer/ or common-packer/
-    ├── templates/
-    │   └── *.pkr.hcl
-    ├── vars/
-    │   └── *.pkrvars.hcl
-    └── provision/
-        └── provisioning scripts
-```
+More examples in [examples/workflows/](examples/workflows/).
 
 ## Packer Template Requirements
 
-Your Packer templates should support bastion host configuration:
+Templates must support bastion host connectivity:
 
 ```hcl
 variable "bastion_host" {
@@ -195,124 +209,97 @@ variable "bastion_user" {
 }
 
 source "openstack" "image" {
-  # ... other config ...
+  # Standard OpenStack configuration
+  flavor              = var.flavor
+  image_name          = var.image_name
+  source_image_filter = {
+    name = var.source_image
+  }
 
-  # Use bastion for SSH connectivity
-  ssh_bastion_host     = var.bastion_host
+  # Bastion configuration for secure connectivity
+  ssh_bastion_host     = var.bastion_host != "" ? var.bastion_host : null
   ssh_bastion_username = var.bastion_user
+
+  # Target instance SSH
+  ssh_username = "ubuntu"
+  ssh_timeout  = "15m"
 }
 ```
 
-## 🛠️ Development
+## Development
 
-### Setup Pre-commit Hooks
+See [DEVELOPMENT.md](DEVELOPMENT.md) for:
+
+- Local setup and testing
+- Contributing guidelines
+- Code style requirements
+- Release process
+
+### Quick Development Setup
 
 ```bash
-pip install pre-commit
+# Clone and setup
+git clone https://github.com/lfit/releng-packer-action.git
+cd releng-packer-action
+pip install -r requirements-dev.txt
 pre-commit install
+
+# Run tests
 pre-commit run --all-files
+pytest
+
+# Test workflows
+gh workflow run test-action-validate.yaml
 ```
 
-### Local Testing
+## Documentation
 
-**Test OpenStack credentials:**
+- **[README.md](README.md)** - This file, main overview
+- **[TAILSCALE_SETUP.md](TAILSCALE_SETUP.md)** - Tailscale configuration guide
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Developer guide and contributing
+- **[examples/](examples/)** - Example workflows for Gerrit integration
 
-```bash
-export OS_AUTH_URL="https://auth.vexxhost.net/v3"
-export OS_PROJECT_NAME="your-project"
-export OS_USERNAME="your-username"
-export OS_PASSWORD="your-password"
-export OS_REGION_NAME="ca-ymq-1"
-
-openstack server list
-```
-
-**Validate Packer templates:**
-
-```bash
-./test-templates.sh
-```
-
-**Test cloud-init syntax:**
-
-```bash
-cloud-init schema --config-file templates/bastion-cloud-init.yaml
-```
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-| Problem               | Solution                                      |
-| --------------------- | --------------------------------------------- |
-| OpenStack auth failed | Verify credentials in GitHub secrets          |
-| Tailscale timeout     | Check auth key settings (ephemeral, reusable) |
-| Bastion not joining   | Review cloud-init logs via console            |
-| Packer build failed   | Enable debug mode, check SSH connectivity     |
+**Tailscale connection failed**
 
-**Detailed troubleshooting:** See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
+- Verify OAuth client or auth key in GitHub secrets
+- Check ACL configuration includes required tags
+- See [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md#troubleshooting)
 
-### Debug Mode
+**Bastion not joining Tailscale**
 
-```yaml
-# Workflow dispatch input
-debug_mode: true
+- Check bastion can reach `*.tailscale.com` (outbound HTTPS)
+- Review cloud-init logs: `openstack console log show bastion-gh-xxxxx`
 
-# Or set in workflow
-env:
-  PACKER_LOG: 1
-  ACTIONS_STEP_DEBUG: true
-```
+**Packer build failed**
 
-### View Bastion Logs
+- Enable debug mode in workflow
+- Verify bastion SSH connectivity
+- Check Packer template syntax
 
-```bash
-# Via OpenStack console
-openstack console log show bastion-gh-12345 --lines 100
+**OpenStack authentication failed**
 
-# Via SSH (if accessible)
-ssh root@<bastion-ip> cat /var/log/bastion-init.log
-```
+- Verify all credentials in GitHub secrets
+- Test with OpenStack CLI locally
 
-## 📚 Documentation
+See full troubleshooting guide in [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md#troubleshooting).
 
-- **[Quick Start Guide](docs/QUICK_START.md)** - Get running in 15 minutes
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - Detailed design and workflow
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Cloud-Init Reference](docs/BASTION_CLOUD_INIT.md)** - Bastion configuration
-- **[Setup Checklist](CHECKLIST.md)** - Verification steps
-- **[Examples](examples/README.md)** - Sample Packer templates
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing`)
-3. Install pre-commit hooks (`pre-commit install`)
-4. Make changes and commit (`git commit -am 'Add feature'`)
-5. Push to branch (`git push origin feature/amazing`)
-6. Open Pull Request
-
-## 📖 Resources
-
-- **Tailscale:** https://tailscale.com/kb/
-- **VexxHost:** https://docs.vexxhost.com/
-- **Packer:** https://developer.hashicorp.com/packer/docs
-- **OpenStack:** https://docs.openstack.org/python-openstackclient/
-- **GitHub Actions:** https://docs.github.com/en/actions
-
-## 📄 License
+## License
 
 SPDX-License-Identifier: Apache-2.0
 
-Copyright (c) 2025 - Licensed under the Apache License, Version 2.0
+Copyright (c) 2025 Linux Foundation - Licensed under Apache License 2.0
 
-## ⭐ Acknowledgments
+## Acknowledgments
 
-Based on patterns from:
+Built using patterns from:
 
-- [releng-common-packer](https://github.com/lfit/releng-common-packer) - Packer validation workflows
-- [releng-builder](https://github.com/lfit/releng-builder) - Tailscale bastion implementation
+- [releng-reusable-workflows](https://github.com/lfit/releng-reusable-workflows)
+- [releng-builder](https://github.com/lfit/releng-builder)
 
 ---
 
-**Questions?** Open an issue or see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+**Questions?** Open an [issue](https://github.com/lfit/releng-packer-action/issues) or see documentation above.
