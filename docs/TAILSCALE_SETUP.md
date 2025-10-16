@@ -4,7 +4,7 @@ Complete guide for configuring Tailscale for Packer builds with bastion hosts.
 
 ## Overview
 
-This action requires Tailscale for secure connectivity between GitHub Actions runners and VexxHost bastion hosts. This guide covers both OAuth (recommended) and auth key methods.
+This action requires Tailscale for secure connectivity between GitHub Actions runners and OpenStack bastion hosts. This guide covers both OAuth (recommended) and auth key methods.
 
 ## Prerequisites
 

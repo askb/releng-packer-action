@@ -1,5 +1,5 @@
 #cloud-config
-# VexxHost Tailscale Bastion Host Cloud-Init Script
+# OpenStack Tailscale Bastion Host Cloud-Init Script
 # Purpose: Creates ephemeral bastion host for GitHub Actions Packer builds
 # Usage: Used during openstack server create with --user-data flag
 
@@ -111,7 +111,7 @@ write_files:
   - path: /etc/motd
     content: |
       ╔═══════════════════════════════════════════════════════╗
-      ║     VexxHost Tailscale Bastion Host                  ║
+      ║     OpenStack Tailscale Bastion Host                  ║
       ║     GitHub Actions Packer Build Environment          ║
       ╚═══════════════════════════════════════════════════════╝
 

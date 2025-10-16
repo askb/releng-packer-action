@@ -1,6 +1,6 @@
 # Bastion Cloud-Init Configuration
 
-This document explains the cloud-init configuration used for VexxHost bastion hosts.
+This document explains the cloud-init configuration used for OpenStack bastion hosts.
 
 ## Overview
 
@@ -175,7 +175,7 @@ Options:
 
 With IP forwarding enabled, the bastion can:
 
-- Route traffic to VexxHost internal network
+- Route traffic to OpenStack internal network
 - Act as SSH jump host for Packer builds
 - Forward connections to build target instances
 
@@ -211,7 +211,7 @@ ssh root@<bastion-ip> tailscale ip -4
 
 **Symptom:** Script waiting indefinitely for network
 
-**Solution:** Check VexxHost network configuration
+**Solution:** Check OpenStack network configuration
 
 ```bash
 openstack server show bastion-gh-12345 | grep network

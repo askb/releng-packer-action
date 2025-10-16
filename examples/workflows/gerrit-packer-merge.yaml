@@ -349,13 +349,13 @@ jobs:
           packer_working_dir: "packer"
           packer_version: "1.11.2"
 
-          # VexxHost credentials
-          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
-          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
-          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD }}
-          vexxhost_region: ${{ secrets.VEXXHOST_REGION }}
-          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          # OpenStack credentials
+          openstack_auth_url: ${{ secrets.OPENSTACK_AUTH_URL }}
+          openstack_project_id: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          openstack_username: ${{ secrets.OPENSTACK_USERNAME }}
+          openstack_password: ${{ secrets.OPENSTACK_PASSWORD }}
+          openstack_region: ${{ secrets.OPENSTACK_REGION }}
+          openstack_network_id: ${{ secrets.OPENSTACK_NETWORK_ID }}
 
           # Tailscale OAuth
           tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}

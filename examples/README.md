@@ -1,6 +1,6 @@
 # Example Packer Template with Bastion Support
 
-This example demonstrates how to configure Packer templates to work with the VexxHost Tailscale bastion workflow.
+This example demonstrates how to configure Packer templates to work with the OpenStack Tailscale bastion workflow.
 
 ## Structure
 

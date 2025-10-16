@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup script for VexxHost Packer workflow
+# Setup script for OpenStack Packer workflow
 # SPDX-License-Identifier: Apache-2.0
 
 set -e
@@ -7,7 +7,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================="
-echo "VexxHost Packer Workflow Setup"
+echo "OpenStack Packer Workflow Setup"
 echo "========================================="
 echo ""
 
@@ -109,7 +109,7 @@ case $option in
 
             # Create initial commit
             git -C "$SCRIPT_DIR" add .
-            git -C "$SCRIPT_DIR" commit -m "Initial commit: VexxHost Packer workflow" || true
+            git -C "$SCRIPT_DIR" commit -m "Initial commit: OpenStack Packer workflow" || true
             success "Initial commit created"
         fi
         ;;
@@ -173,7 +173,7 @@ case $option in
         fi
 
         # Validate workflow YAML
-        if python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.github/workflows/packer-vexxhost-bastion-build.yaml'))"; then
+        if python3 -c "import yaml; yaml.safe_load(open('$SCRIPT_DIR/.github/workflows/packer-openstack-bastion-build.yaml'))"; then
             success "Workflow YAML is valid"
         else
             error "Workflow YAML validation failed"
@@ -220,13 +220,13 @@ case $option in
         echo "  TAILSCALE_OAUTH_KEY      - OAuth client secret"
         echo "  TAILSCALE_AUTH_KEY       - Auth key for bastion"
         echo ""
-        echo "VexxHost (6):"
-        echo "  VEXXHOST_AUTH_URL        - https://auth.vexxhost.net/v3"
-        echo "  VEXXHOST_PROJECT_ID      - Your project ID"
-        echo "  VEXXHOST_PROJECT_NAME    - Your project name"
-        echo "  VEXXHOST_USERNAME        - Your username"
-        echo "  VEXXHOST_PASSWORD        - Your password"
-        echo "  VEXXHOST_REGION          - ca-ymq-1 (or your region)"
+        echo "OpenStack (6):"
+        echo "  OPENSTACK_AUTH_URL        - https://auth.openstack.net/v3"
+        echo "  OPENSTACK_PROJECT_ID      - Your project ID"
+        echo "  OPENSTACK_PROJECT_NAME    - Your project name"
+        echo "  OPENSTACK_USERNAME        - Your username"
+        echo "  OPENSTACK_PASSWORD        - Your password"
+        echo "  OPENSTACK_REGION          - ca-ymq-1 (or your region)"
         echo ""
         echo "Optional (2):"
         echo "  CLOUD_ENV_B64            - Base64 encoded cloud-env.pkrvars.hcl"

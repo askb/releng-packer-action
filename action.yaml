@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2025 The Linux Foundation
 
-name: "Packer Build with VexxHost Tailscale Bastion"
+name: "Packer Build with OpenStack Tailscale Bastion"
 description: "Build OpenStack images using Packer through a Tailscale bastion host"
 author: "The Linux Foundation"
 
@@ -41,7 +41,7 @@ inputs:
 
   # Cloud Configuration Files (base64 encoded)
   cloud_env_json:
-    description: "Cloud environment JSON configuration (base64 encoded) - optional, will be generated from vexxhost_* inputs if not provided"
+    description: "Cloud environment JSON configuration (base64 encoded) - optional, will be generated from openstack_* inputs if not provided"
     required: false
     default: ""
   clouds_yaml:
@@ -49,29 +49,29 @@ inputs:
     required: false
     default: ""
 
-  # VexxHost/OpenStack Credentials
-  vexxhost_auth_url:
-    description: "VexxHost/OpenStack auth URL"
+  # OpenStack/OpenStack Credentials
+  openstack_auth_url:
+    description: "OpenStack/OpenStack auth URL"
     required: false
     default: ""
-  vexxhost_project_id:
-    description: "VexxHost/OpenStack project/tenant ID"
+  openstack_project_id:
+    description: "OpenStack/OpenStack project/tenant ID"
     required: false
     default: ""
-  vexxhost_username:
-    description: "VexxHost/OpenStack username"
+  openstack_username:
+    description: "OpenStack/OpenStack username"
     required: false
     default: ""
-  vexxhost_password:
-    description: "VexxHost/OpenStack password (will be base64 decoded if needed)"
+  openstack_password:
+    description: "OpenStack/OpenStack password (will be base64 decoded if needed)"
     required: false
     default: ""
-  vexxhost_region:
-    description: "VexxHost/OpenStack region"
+  openstack_region:
+    description: "OpenStack/OpenStack region"
     required: false
     default: "ca-ymq-1"
-  vexxhost_network_id:
-    description: "VexxHost/OpenStack network UUID for Packer builds"
+  openstack_network_id:
+    description: "OpenStack/OpenStack network UUID for Packer builds"
     required: false
     default: ""
 
@@ -245,11 +245,11 @@ runs:
       if: inputs.mode == 'build'
       shell: bash
       env:
-        OS_AUTH_URL: ${{ inputs.vexxhost_auth_url }}
-        OS_PROJECT_ID: ${{ inputs.vexxhost_project_id }}
-        OS_USERNAME: ${{ inputs.vexxhost_username }}
-        OS_PASSWORD: ${{ inputs.vexxhost_password }}
-        OS_REGION_NAME: ${{ inputs.vexxhost_region }}
+        OS_AUTH_URL: ${{ inputs.openstack_auth_url }}
+        OS_PROJECT_ID: ${{ inputs.openstack_project_id }}
+        OS_USERNAME: ${{ inputs.openstack_username }}
+        OS_PASSWORD: ${{ inputs.openstack_password }}
+        OS_REGION_NAME: ${{ inputs.openstack_region }}
       run: |
         # Check if password is base64 encoded and decode if needed
         if echo "$OS_PASSWORD" | base64 -d &>/dev/null; then
@@ -414,26 +414,26 @@ runs:
             echo '${{ inputs.cloud_env_json }}' > cloud-env.json
           fi
           echo "✅ Using provided cloud_env_json"
-        elif [ -n "${{ inputs.vexxhost_auth_url }}" ]; then
-          # Generate cloud-env from vexxhost credentials
+        elif [ -n "${{ inputs.openstack_auth_url }}" ]; then
+          # Generate cloud-env from openstack credentials
           # Decode password if base64 encoded
-          if echo "${{ inputs.vexxhost_password }}" | base64 -d &>/dev/null 2>&1; then
-            CLOUD_PASS=$(echo "${{ inputs.vexxhost_password }}" | base64 -d)
+          if echo "${{ inputs.openstack_password }}" | base64 -d &>/dev/null 2>&1; then
+            CLOUD_PASS=$(echo "${{ inputs.openstack_password }}" | base64 -d)
           else
-            CLOUD_PASS="${{ inputs.vexxhost_password }}"
+            CLOUD_PASS="${{ inputs.openstack_password }}"
           fi
 
           # Create cloud-env.json
           cat > cloud-env.json <<EOF
         {
-          "cloud_auth_url": "${{ inputs.vexxhost_auth_url }}",
-          "cloud_tenant": "${{ inputs.vexxhost_project_id }}",
-          "cloud_user": "${{ inputs.vexxhost_username }}",
+          "cloud_auth_url": "${{ inputs.openstack_auth_url }}",
+          "cloud_tenant": "${{ inputs.openstack_project_id }}",
+          "cloud_user": "${{ inputs.openstack_username }}",
           "cloud_pass": "${CLOUD_PASS}",
-          "cloud_network": "${{ inputs.vexxhost_network_id }}"
+          "cloud_network": "${{ inputs.openstack_network_id }}"
         }
         EOF
-          echo "✅ Generated cloud_env_json from vexxhost credentials"
+          echo "✅ Generated cloud_env_json from openstack credentials"
         else
           echo "⚠️ No cloud environment configuration provided"
         fi

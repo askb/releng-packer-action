@@ -1,6 +1,6 @@
 # Test Suite
 
-Comprehensive test suite for the Packer VexxHost Bastion Action.
+Comprehensive test suite for the Packer OpenStack Bastion Action.
 
 ## Running Tests
 

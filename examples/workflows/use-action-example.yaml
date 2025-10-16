@@ -1,6 +1,6 @@
 ---
 # SPDX-License-Identifier: Apache-2.0
-# Example workflow showing how to use the packer-vexxhost-bastion-action
+# Example workflow showing how to use the packer-openstack-bastion-action
 # from a CI/builder repository
 
 name: Build Images with Packer Action
@@ -36,7 +36,7 @@ jobs:
 
       - name: Build Image with Packer
         id: build
-        uses: lfit/packer-vexxhost-bastion-action@main # Use @v1 for stable version
+        uses: lfit/packer-openstack-bastion-action@main # Use @v1 for stable version
         with:
           # Packer configuration
           packer_template: "templates/builder.pkr.hcl"
@@ -47,13 +47,13 @@ jobs:
           # Cloud configuration
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
 
-          # VexxHost credentials
-          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
-          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
-          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
-          vexxhost_region: ${{ secrets.VEXXHOST_REGION || 'ca-ymq-1' }}
-          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          # OpenStack credentials
+          openstack_auth_url: ${{ secrets.OPENSTACK_AUTH_URL }}
+          openstack_project_id: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          openstack_username: ${{ secrets.OPENSTACK_USERNAME }}
+          openstack_password: ${{ secrets.OPENSTACK_PASSWORD_B64 }}
+          openstack_region: ${{ secrets.OPENSTACK_REGION || 'ca-ymq-1' }}
+          openstack_network_id: ${{ secrets.OPENSTACK_NETWORK_ID }}
 
           # Bastion configuration
           bastion_flavor: "v3-standard-2"

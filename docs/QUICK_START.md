@@ -1,11 +1,11 @@
-# Quick Start Guide: VexxHost Bastion with GitHub Actions
+# Quick Start Guide: OpenStack Bastion with GitHub Actions
 
 Get automated Packer builds running in **15-20 minutes**.
 
 ## Prerequisites
 
 - ✅ GitHub repository with Packer files
-- ✅ VexxHost account with OpenStack access
+- ✅ OpenStack account with OpenStack access
 - ✅ Tailscale account (free tier works)
 
 ---
@@ -34,14 +34,14 @@ Get automated Packer builds running in **15-20 minutes**.
 
 ---
 
-## Step 2: Get VexxHost Credentials (3 min)
+## Step 2: Get OpenStack Credentials (3 min)
 
-1. Log in to [VexxHost Dashboard](https://console.vexxhost.net)
+1. Log in to [OpenStack Dashboard](https://console.openstack.net)
 2. Navigate to **API Access** or **Project → API Access**
 3. Download OpenStack RC file (v3) or copy these values:
 
 ```bash
-OS_AUTH_URL=https://auth.vexxhost.net/v3
+OS_AUTH_URL=https://auth.openstack.net/v3
 OS_PROJECT_ID=your-project-id
 OS_PROJECT_NAME=your-project-name
 OS_USERNAME=your-username
@@ -69,12 +69,12 @@ Add these 8 secrets:
 | ----------------------- | -------------------- | ------------------------------ |
 | `TAILSCALE_OAUTH_KEY`   | OAuth client secret  | `tskey-client-...`             |
 | `TAILSCALE_AUTH_KEY`    | Auth key from Step 1 | `tskey-auth-...`               |
-| `VEXXHOST_AUTH_URL`     | OpenStack endpoint   | `https://auth.vexxhost.net/v3` |
-| `VEXXHOST_PROJECT_ID`   | Project ID           | `abc123...`                    |
-| `VEXXHOST_PROJECT_NAME` | Project name         | `my-project`                   |
-| `VEXXHOST_USERNAME`     | Your username        | `user@example.com`             |
-| `VEXXHOST_PASSWORD`     | Your password        | `your-password`                |
-| `VEXXHOST_REGION`       | Region code          | `ca-ymq-1`                     |
+| `OPENSTACK_AUTH_URL`     | OpenStack endpoint   | `https://auth.openstack.net/v3` |
+| `OPENSTACK_PROJECT_ID`   | Project ID           | `abc123...`                    |
+| `OPENSTACK_PROJECT_NAME` | Project name         | `my-project`                   |
+| `OPENSTACK_USERNAME`     | Your username        | `user@example.com`             |
+| `OPENSTACK_PASSWORD`     | Your password        | `your-password`                |
+| `OPENSTACK_REGION`       | Region code          | `ca-ymq-1`                     |
 
 ---
 
@@ -104,7 +104,7 @@ cp -r examples/provision packer/
 
 ```bash
 git add .
-git commit -m "Add VexxHost bastion workflow and templates"
+git commit -m "Add OpenStack bastion workflow and templates"
 git push
 ```
 
@@ -115,7 +115,7 @@ git push
 ### Trigger the Workflow
 
 1. Go to GitHub → **Actions** tab
-2. Select **Packer Build with VexxHost Tailscale Bastion** workflow
+2. Select **Packer Build with OpenStack Tailscale Bastion** workflow
 3. Click **Run workflow** → **Run workflow** (green button)
 
 ### Expected Timeline
@@ -123,7 +123,7 @@ git push
 ```
 00:00 - Checkout & setup tools          (30s)
 00:30 - Connect to Tailscale            (15s)
-00:45 - Launch bastion on VexxHost      (60s)
+00:45 - Launch bastion on OpenStack      (60s)
 01:45 - Bastion joins Tailscale         (30s)
 02:15 - Packer init & validate          (30s)
 02:45 - Packer build starts             (5-15 min)
@@ -135,7 +135,7 @@ git push
 
 - **GitHub Actions UI:** See each step's logs
 - **Tailscale Admin:** Watch bastion appear in devices list
-- **VexxHost Dashboard:** See instance being created/deleted
+- **OpenStack Dashboard:** See instance being created/deleted
 
 ---
 
@@ -145,9 +145,9 @@ After your first successful run:
 
 - [ ] Workflow completed without errors
 - [ ] Bastion appeared in Tailscale admin console
-- [ ] VexxHost instance was created and deleted
+- [ ] OpenStack instance was created and deleted
 - [ ] Packer build produced expected image
-- [ ] No lingering resources in VexxHost
+- [ ] No lingering resources in OpenStack
 - [ ] Tailscale device auto-removed (ephemeral enabled)
 
 ---
@@ -156,7 +156,7 @@ After your first successful run:
 
 ### ❌ "Authentication failed" (OpenStack)
 
-**Fix:** Double-check VexxHost credentials in GitHub secrets
+**Fix:** Double-check OpenStack credentials in GitHub secrets
 
 ```bash
 # Test locally first
@@ -174,7 +174,7 @@ openstack server list
 
 **Fix:** Cloud-init might have failed
 
-- Check VexxHost console logs for the instance
+- Check OpenStack console logs for the instance
 - Try different base image (Ubuntu 22.04 recommended)
 - Increase `BASTION_WAIT_TIMEOUT` in workflow
 
@@ -201,7 +201,7 @@ packer validate -var-file=vars/ubuntu-22.04.pkrvars.hcl templates/builder.pkr.hc
 
 ### Customize Workflow
 
-Edit `.github/workflows/packer-vexxhost-bastion-build.yaml`:
+Edit `.github/workflows/packer-openstack-bastion-build.yaml`:
 
 ```yaml
 env:
@@ -238,7 +238,7 @@ cp examples/templates/builder.pkr.hcl packer/templates/docker.pkr.hcl
 
 ## Cost Estimate
 
-### VexxHost Costs (approx)
+### OpenStack Costs (approx)
 
 - **Bastion instance:** v3-standard-2 @ ~$0.08/hour
 - **Average build time:** 15 minutes
@@ -271,14 +271,14 @@ Enable debug mode in workflow dispatch:
 Check logs:
 
 - GitHub Actions → Workflow run → Download artifacts
-- VexxHost console logs
+- OpenStack console logs
 - Tailscale admin panel
 
 ### Community
 
 - **GitHub Discussions:** Ask questions in your repo
 - **Tailscale Community:** https://tailscale.com/kb/
-- **VexxHost Support:** https://vexxhost.com/support/
+- **OpenStack Support:** https://openstack.com/support/
 
 ---
 

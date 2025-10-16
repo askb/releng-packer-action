@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for the VexxHost Tailscale Bastion workflow.
+Common issues and solutions for the OpenStack Tailscale Bastion workflow.
 
 ## Table of Contents
 
@@ -30,7 +30,7 @@ Unable to authenticate to OpenStack
 
    ```bash
    # Test locally first
-   export OS_AUTH_URL="https://auth.vexxhost.net/v3"
+   export OS_AUTH_URL="https://auth.openstack.net/v3"
    export OS_PROJECT_NAME="your-project"
    export OS_USERNAME="your-username"
    export OS_PASSWORD="your-password"
@@ -41,13 +41,13 @@ Unable to authenticate to OpenStack
 
 2. Check secret names match exactly:
 
-   - `VEXXHOST_AUTH_URL`
-   - `VEXXHOST_PROJECT_NAME`
-   - `VEXXHOST_USERNAME`
-   - `VEXXHOST_PASSWORD`
-   - `VEXXHOST_REGION`
+   - `OPENSTACK_AUTH_URL`
+   - `OPENSTACK_PROJECT_NAME`
+   - `OPENSTACK_USERNAME`
+   - `OPENSTACK_PASSWORD`
+   - `OPENSTACK_REGION`
 
-3. Verify VexxHost account is active and has quota
+3. Verify OpenStack account is active and has quota
 
 ### ❌ Insufficient Quota
 
@@ -74,7 +74,7 @@ Error: Quota exceeded for cores
    openstack server delete <instance-name>
    ```
 
-3. Request quota increase from VexxHost support
+3. Request quota increase from OpenStack support
 
 4. Use smaller instance flavor:
    ```yaml
@@ -103,7 +103,7 @@ Error: Image 'Ubuntu 22.04' not found
    bastion_image: "Ubuntu-22.04-x86_64" # Exact name from image list
    ```
 
-3. Common VexxHost image names:
+3. Common OpenStack image names:
    - `Ubuntu 22.04`
    - `Ubuntu-22.04-x86_64`
    - `ubuntu-22.04`
@@ -429,7 +429,7 @@ Plugin not found
 **Symptoms:**
 
 ```
-Error: Connection timeout to auth.vexxhost.net
+Error: Connection timeout to auth.openstack.net
 Error: Unable to reach OpenStack endpoint
 ```
 
@@ -438,7 +438,7 @@ Error: Unable to reach OpenStack endpoint
 1. **Verify Auth URL:**
 
    ```bash
-   curl -I https://auth.vexxhost.net/v3
+   curl -I https://auth.openstack.net/v3
    ```
 
 2. **Check GitHub Runner Network:**
@@ -450,8 +450,8 @@ Error: Unable to reach OpenStack endpoint
    ```yaml
    - name: Test connectivity
      run: |
-       curl -v https://auth.vexxhost.net/v3
-       ping -c 3 auth.vexxhost.net
+       curl -v https://auth.openstack.net/v3
+       ping -c 3 auth.openstack.net
    ```
 
 ### ❌ Bastion Cannot Reach Build Instance
@@ -650,7 +650,7 @@ PACKER_LOG=1 packer build -var-file=... template.pkr.hcl
 
 - GitHub Discussions
 - Tailscale Community Forum
-- VexxHost Support Portal
+- OpenStack Support Portal
 - Packer Community Forum
 
 ### Reporting Issues
@@ -701,7 +701,7 @@ packer validate -var-file=vars/ubuntu-22.04.pkrvars.hcl templates/builder.pkr.hc
 
 ### 4. Monitor Costs
 
-- Check VexxHost billing regularly
+- Check OpenStack billing regularly
 - Delete unused instances
 - Use appropriate instance flavors
 
@@ -754,7 +754,7 @@ export OS_DEBUG=1
 
 ### Important Files
 
-- Workflow: `.github/workflows/packer-vexxhost-bastion-build.yaml`
+- Workflow: `.github/workflows/packer-openstack-bastion-build.yaml`
 - Pre-commit: `.pre-commit-config.yaml`
 - Yamllint: `.yamllint.conf`
 - Documentation: `docs/`

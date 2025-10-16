@@ -31,7 +31,7 @@ The action creates an ephemeral bastion host on OpenStack that joins your Tailsc
 ### Prerequisites
 
 - GitHub repository with Packer templates
-- OpenStack cloud account (VexxHost, etc.)
+- OpenStack cloud account (OpenStack, etc.)
 - Tailscale account (free tier sufficient)
 
 ### 1. Configure Tailscale

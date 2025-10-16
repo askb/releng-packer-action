@@ -88,12 +88,12 @@ jobs:
           bastion_flavor: v3-standard-2
           bastion_image: "Ubuntu 22.04.5 LTS (x86_64) [2025-03-27]"
           bastion_network: odlci
-          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
-          vexxhost_project_id: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          vexxhost_username: ${{ secrets.VEXXHOST_USERNAME }}
-          vexxhost_password: ${{ secrets.VEXXHOST_PASSWORD }}
-          vexxhost_region: ${{ secrets.VEXXHOST_REGION }}
-          vexxhost_network_id: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          openstack_auth_url: ${{ secrets.OPENSTACK_AUTH_URL }}
+          openstack_project_id: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          openstack_username: ${{ secrets.OPENSTACK_USERNAME }}
+          openstack_password: ${{ secrets.OPENSTACK_PASSWORD }}
+          openstack_region: ${{ secrets.OPENSTACK_REGION }}
+          openstack_network_id: ${{ secrets.OPENSTACK_NETWORK_ID }}
           tailscale_oauth_client_id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           tailscale_oauth_secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           debug_mode: ${{ inputs.debug_mode || false }}

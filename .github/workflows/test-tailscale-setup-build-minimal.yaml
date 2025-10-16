@@ -19,7 +19,7 @@ on:
         type: string
         default: "ubuntu-22.04"
       bastion_flavor:
-        description: "VexxHost instance flavor for bastion"
+        description: "OpenStack instance flavor for bastion"
         required: false
         type: string
         default: "v3-standard-2"
@@ -107,7 +107,7 @@ jobs:
               - 'templates/**'
               - 'provision/**'
 
-  packer-build-vexxhost:
+  packer-build-openstack:
     needs: prepare
     runs-on: ubuntu-latest
     if: |
@@ -161,13 +161,13 @@ jobs:
 
       - name: Configure OpenStack credentials
         env:
-          OS_AUTH_URL: ${{ secrets.VEXXHOST_AUTH_URL }}
-          OS_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          OS_PROJECT_NAME: ${{ secrets.VEXXHOST_PROJECT_NAME }}
-          OS_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
-          OS_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
-          OS_PASSWORD_PLAIN: ${{ secrets.VEXXHOST_PASSWORD }}
-          OS_REGION_NAME: ${{ secrets.VEXXHOST_REGION }}
+          OS_AUTH_URL: ${{ secrets.OPENSTACK_AUTH_URL }}
+          OS_PROJECT_ID: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          OS_PROJECT_NAME: ${{ secrets.OPENSTACK_PROJECT_NAME }}
+          OS_USERNAME: ${{ secrets.OPENSTACK_USERNAME }}
+          OS_PASSWORD_B64: ${{ secrets.OPENSTACK_PASSWORD_B64 }}
+          OS_PASSWORD_PLAIN: ${{ secrets.OPENSTACK_PASSWORD }}
+          OS_REGION_NAME: ${{ secrets.OPENSTACK_REGION }}
           OS_IDENTITY_API_VERSION: "3"
           OS_USER_DOMAIN_NAME: "Default"
           OS_PROJECT_DOMAIN_NAME: "Default"
@@ -178,7 +178,7 @@ jobs:
             echo "🔐 Using base64-decoded password"
           else
             OS_PASSWORD="$OS_PASSWORD_PLAIN"
-            echo "⚠️  Using plain password (consider using VEXXHOST_PASSWORD_B64)"
+            echo "⚠️  Using plain password (consider using OPENSTACK_PASSWORD_B64)"
           fi
 
           {
@@ -216,7 +216,7 @@ jobs:
             echo "Creating inline cloud-init configuration..."
             cat > cloud-init.yaml <<'EOFCI'
           #cloud-config
-          # VexxHost Tailscale Bastion Host Cloud-Init
+          # OpenStack Tailscale Bastion Host Cloud-Init
           hostname: ${BASTION_HOSTNAME}
           manage_etc_hosts: true
 
@@ -280,7 +280,7 @@ jobs:
             - path: /etc/motd
               content: |
                 ╔═══════════════════════════════════════════╗
-                ║   VexxHost Tailscale Bastion Host        ║
+                ║   OpenStack Tailscale Bastion Host        ║
                 ║   GitHub Actions Packer Build Env        ║
                 ╚═══════════════════════════════════════════╝
                 Logs: /var/log/bastion-init.log
@@ -313,7 +313,7 @@ jobs:
           echo "Cloud-init script created:"
           cat cloud-init.yaml
 
-      - name: Launch bastion instance on VexxHost
+      - name: Launch bastion instance on OpenStack
         id: launch-bastion
         run: |
           echo "🚀 Launching bastion instance..."
@@ -405,29 +405,29 @@ jobs:
 
       - name: Create Packer cloud environment JSON
         env:
-          VEXXHOST_AUTH_URL: ${{ secrets.VEXXHOST_AUTH_URL }}
-          VEXXHOST_PROJECT_ID: ${{ secrets.VEXXHOST_PROJECT_ID }}
-          VEXXHOST_USERNAME: ${{ secrets.VEXXHOST_USERNAME }}
-          VEXXHOST_PASSWORD_B64: ${{ secrets.VEXXHOST_PASSWORD_B64 }}
-          VEXXHOST_PASSWORD: ${{ secrets.VEXXHOST_PASSWORD }}
-          VEXXHOST_NETWORK_ID: ${{ secrets.VEXXHOST_NETWORK_ID }}
+          OPENSTACK_AUTH_URL: ${{ secrets.OPENSTACK_AUTH_URL }}
+          OPENSTACK_PROJECT_ID: ${{ secrets.OPENSTACK_PROJECT_ID }}
+          OPENSTACK_USERNAME: ${{ secrets.OPENSTACK_USERNAME }}
+          OPENSTACK_PASSWORD_B64: ${{ secrets.OPENSTACK_PASSWORD_B64 }}
+          OPENSTACK_PASSWORD: ${{ secrets.OPENSTACK_PASSWORD }}
+          OPENSTACK_NETWORK_ID: ${{ secrets.OPENSTACK_NETWORK_ID }}
         run: |
           # Decode password if base64 encoded version exists, otherwise use plain
-          if [ -n "$VEXXHOST_PASSWORD_B64" ]; then
-            CLOUD_PASS=$(echo "$VEXXHOST_PASSWORD_B64" | base64 --decode)
+          if [ -n "$OPENSTACK_PASSWORD_B64" ]; then
+            CLOUD_PASS=$(echo "$OPENSTACK_PASSWORD_B64" | base64 --decode)
           else
-            CLOUD_PASS="$VEXXHOST_PASSWORD"
+            CLOUD_PASS="$OPENSTACK_PASSWORD"
           fi
 
           # Use network ID from secret, or default if not set
-          NETWORK_ID="${VEXXHOST_NETWORK_ID:-b5fcd86e-efac-4997-b8bc-dbe0d35bc229}"
+          NETWORK_ID="${OPENSTACK_NETWORK_ID:-b5fcd86e-efac-4997-b8bc-dbe0d35bc229}"
 
           # Create cloud-env.json for Packer
           cat > "${GITHUB_WORKSPACE}/cloud-env.json" <<EOF
           {
-            "cloud_auth_url": "${VEXXHOST_AUTH_URL}",
-            "cloud_tenant": "${VEXXHOST_PROJECT_ID}",
-            "cloud_user": "${VEXXHOST_USERNAME}",
+            "cloud_auth_url": "${OPENSTACK_AUTH_URL}",
+            "cloud_tenant": "${OPENSTACK_PROJECT_ID}",
+            "cloud_user": "${OPENSTACK_USERNAME}",
             "cloud_pass": "${CLOUD_PASS}",
             "cloud_network": "${NETWORK_ID}",
             "ssh_proxy_host": "${{ env.BASTION_IP }}"
@@ -705,7 +705,7 @@ jobs:
   # ========================================
   summary:
     if: always()
-    needs: [prepare, packer-build-vexxhost]
+    needs: [prepare, packer-build-openstack]
     runs-on: ubuntu-latest
     steps:
       - name: Build summary
@@ -721,7 +721,7 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${{ needs.packer-build-vexxhost.result }}" == "success" ]; then
+          if [ "${{ needs.packer-build-openstack.result }}" == "success" ]; then
             echo "✅ **Build Status:** Success" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "❌ **Build Status:** Failed" >> "$GITHUB_STEP_SUMMARY"

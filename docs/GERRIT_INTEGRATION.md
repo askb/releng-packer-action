@@ -1,6 +1,6 @@
 # Gerrit Integration Guide
 
-This guide explains how to integrate the Packer VexxHost Bastion Action with Gerrit-based workflows.
+This guide explains how to integrate the Packer OpenStack Bastion Action with Gerrit-based workflows.
 
 ## Overview
 
@@ -64,11 +64,11 @@ Configure these secrets:
 | `GERRIT_SSH_PRIVKEY`    | Validation            | SSH private key for Gerrit access     |
 | `CLOUD_ENV_JSON_B64`    | Build only            | Base64-encoded cloud environment JSON |
 | `CLOUDS_YAML_B64`       | Build only (optional) | Base64-encoded clouds.yaml            |
-| `VEXXHOST_AUTH_URL`     | Build only            | OpenStack auth URL                    |
-| `VEXXHOST_PROJECT_ID`   | Build only            | OpenStack project ID                  |
-| `VEXXHOST_USERNAME`     | Build only            | OpenStack username                    |
-| `VEXXHOST_PASSWORD_B64` | Build only            | Base64-encoded password               |
-| `VEXXHOST_NETWORK_ID`   | Build only            | Network UUID                          |
+| `OPENSTACK_AUTH_URL`     | Build only            | OpenStack auth URL                    |
+| `OPENSTACK_PROJECT_ID`   | Build only            | OpenStack project ID                  |
+| `OPENSTACK_USERNAME`     | Build only            | OpenStack username                    |
+| `OPENSTACK_PASSWORD_B64` | Build only            | Base64-encoded password               |
+| `OPENSTACK_NETWORK_ID`   | Build only            | Network UUID                          |
 | `TAILSCALE_AUTH_KEY`    | Build only            | Tailscale auth key                    |
 
 ## Validation Workflow (Gerrit Verify)
@@ -126,7 +126,7 @@ jobs:
 
       - name: Validate Packer
         if: steps.changes.outputs.src == 'true'
-        uses: lfit/packer-vexxhost-bastion-action@v1
+        uses: lfit/packer-openstack-bastion-action@v1
         with:
           mode: validate
           packer_template: "templates/builder.pkr.hcl"
@@ -185,15 +185,15 @@ jobs:
       - run: git submodule update --init
 
       - name: Build Image
-        uses: lfit/packer-vexxhost-bastion-action@v1
+        uses: lfit/packer-openstack-bastion-action@v1
         with:
           mode: build
           packer_template: "templates/${{ inputs.template }}.pkr.hcl"
           packer_vars_file: "common-packer/vars/${{ inputs.platform }}.pkrvars.hcl"
           packer_working_dir: "packer"
           cloud_env_json: ${{ secrets.CLOUD_ENV_JSON_B64 }}
-          vexxhost_auth_url: ${{ secrets.VEXXHOST_AUTH_URL }}
-          # ... other VexxHost secrets
+          openstack_auth_url: ${{ secrets.OPENSTACK_AUTH_URL }}
+          # ... other OpenStack secrets
           tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
 ```
 
@@ -269,7 +269,7 @@ jobs:
         with:
           submodules: true
       - run: git submodule update --init
-      - uses: lfit/packer-vexxhost-bastion-action@v1
+      - uses: lfit/packer-openstack-bastion-action@v1
         with:
           mode: build
           packer_template: "templates/${{ matrix.template }}.pkr.hcl"

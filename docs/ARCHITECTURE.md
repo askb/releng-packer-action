@@ -1,4 +1,4 @@
-# VexxHost Tailscale Bastion MVP - Complete Setup Guide
+# OpenStack Tailscale Bastion MVP - Complete Setup Guide
 
 ## Architecture Overview
 
@@ -14,7 +14,7 @@
                          Tailscale Mesh Network
                                      │
 ┌────────────────────────────────────┼─────────────────────────────┐
-│                VexxHost Cloud      │                              │
+│                OpenStack Cloud      │                              │
 │  ┌─────────────────────────────────▼──────────────────────────┐ │
 │  │            Bastion Host (Ephemeral)                         │ │
 │  │  ┌──────────────┐    ┌────────────────┐                   │ │
@@ -27,7 +27,7 @@
 │                              │                                   │
 │                              ▼                                   │
 │           ┌──────────────────────────────────┐                  │
-│           │  VexxHost OpenStack Resources     │                  │
+│           │  OpenStack OpenStack Resources     │                  │
 │           │  (Build Target Infrastructure)    │                  │
 │           └──────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -36,7 +36,7 @@
 ## Workflow Stages
 
 1. **GitHub Runner Setup** → Install Packer & Tailscale
-2. **Bastion Launch** → Spin up VM on VexxHost with cloud-init
+2. **Bastion Launch** → Spin up VM on OpenStack with cloud-init
 3. **Network Mesh** → Bastion joins Tailscale, creates secure tunnel
 4. **Packer Build** → Execute builds via bastion or through bastion proxy
 5. **Cleanup** → Destroy bastion, disconnect from Tailscale
@@ -67,26 +67,26 @@ Configure these in your repository: **Settings → Secrets and variables → Act
 - ✅ Pre-approved (no manual approval needed)
 - Tags: `tag:bastion`
 
-### VexxHost OpenStack Secrets
+### OpenStack OpenStack Secrets
 
 | Secret Name             | Description             | Where to Find                         |
 | ----------------------- | ----------------------- | ------------------------------------- |
-| `VEXXHOST_AUTH_URL`     | OpenStack auth endpoint | VexxHost dashboard → API Access       |
-| `VEXXHOST_PROJECT_ID`   | Project/tenant ID       | VexxHost dashboard → Project settings |
-| `VEXXHOST_PROJECT_NAME` | Project name            | VexxHost dashboard → Project settings |
-| `VEXXHOST_USERNAME`     | OpenStack username      | Your VexxHost credentials             |
-| `VEXXHOST_PASSWORD`     | OpenStack password      | Your VexxHost credentials             |
-| `VEXXHOST_REGION`       | Region name             | VexxHost dashboard (e.g., `ca-ymq-1`) |
+| `OPENSTACK_AUTH_URL`     | OpenStack auth endpoint | OpenStack dashboard → API Access       |
+| `OPENSTACK_PROJECT_ID`   | Project/tenant ID       | OpenStack dashboard → Project settings |
+| `OPENSTACK_PROJECT_NAME` | Project name            | OpenStack dashboard → Project settings |
+| `OPENSTACK_USERNAME`     | OpenStack username      | Your OpenStack credentials             |
+| `OPENSTACK_PASSWORD`     | OpenStack password      | Your OpenStack credentials             |
+| `OPENSTACK_REGION`       | Region name             | OpenStack dashboard (e.g., `ca-ymq-1`) |
 
 **Example Values:**
 
 ```bash
-VEXXHOST_AUTH_URL=https://auth.vexxhost.net/v3
-VEXXHOST_PROJECT_ID=abc123def456...
-VEXXHOST_PROJECT_NAME=my-project
-VEXXHOST_USERNAME=user@example.com
-VEXXHOST_PASSWORD=secure_password_here
-VEXXHOST_REGION=ca-ymq-1
+OPENSTACK_AUTH_URL=https://auth.openstack.net/v3
+OPENSTACK_PROJECT_ID=abc123def456...
+OPENSTACK_PROJECT_NAME=my-project
+OPENSTACK_USERNAME=user@example.com
+OPENSTACK_PASSWORD=secure_password_here
+OPENSTACK_REGION=ca-ymq-1
 ```
 
 ---
@@ -97,7 +97,7 @@ VEXXHOST_REGION=ca-ymq-1
 packer-jobs/
 ├── .github/
 │   └── workflows/
-│       └── packer-vexxhost-bastion-build.yaml  # Main workflow file
+│       └── packer-openstack-bastion-build.yaml  # Main workflow file
 ├── common-packer/                               # Packer files (optional submodule)
 │   ├── variables.pkrvars.hcl                   # Packer variables
 │   ├── ubuntu.pkr.hcl                          # Packer template
@@ -200,7 +200,7 @@ variable "bastion_user" {
 }
 
 source "openstack" "ubuntu" {
-  # VexxHost OpenStack config
+  # OpenStack OpenStack config
   identity_endpoint = env("OS_AUTH_URL")
   username         = env("OS_USERNAME")
   password         = env("OS_PASSWORD")
@@ -247,11 +247,11 @@ Copy files to bastion and execute there:
 
     # Copy cloud credentials
     ssh root@${BASTION_IP} << 'ENDSSH'
-      export OS_AUTH_URL="${{ secrets.VEXXHOST_AUTH_URL }}"
-      export OS_USERNAME="${{ secrets.VEXXHOST_USERNAME }}"
-      export OS_PASSWORD="${{ secrets.VEXXHOST_PASSWORD }}"
-      export OS_PROJECT_NAME="${{ secrets.VEXXHOST_PROJECT_NAME }}"
-      export OS_REGION_NAME="${{ secrets.VEXXHOST_REGION }}"
+      export OS_AUTH_URL="${{ secrets.OPENSTACK_AUTH_URL }}"
+      export OS_USERNAME="${{ secrets.OPENSTACK_USERNAME }}"
+      export OS_PASSWORD="${{ secrets.OPENSTACK_PASSWORD }}"
+      export OS_PROJECT_NAME="${{ secrets.OPENSTACK_PROJECT_NAME }}"
+      export OS_REGION_NAME="${{ secrets.OPENSTACK_REGION }}"
 
       cd /root/build/common-packer
       packer build .
@@ -334,7 +334,7 @@ Keep bastion running for development:
 openstack console log show bastion-gh-12345 --lines 100
 ```
 
-**SSH to bastion via VexxHost console and check:**
+**SSH to bastion via OpenStack console and check:**
 
 ```bash
 # Cloud-init status
@@ -352,7 +352,7 @@ sudo journalctl -u tailscaled
 **Common issues:**
 
 - Auth key expired → Generate new key
-- Network blocked → Check VexxHost security groups
+- Network blocked → Check OpenStack security groups
 - Cloud-init failed → Check `/var/log/cloud-init.log`
 - Tailscale install failed → Check network connectivity
 
@@ -361,7 +361,7 @@ sudo journalctl -u tailscaled
 **Test OpenStack credentials locally:**
 
 ```bash
-export OS_AUTH_URL="https://auth.vexxhost.net/v3"
+export OS_AUTH_URL="https://auth.openstack.net/v3"
 export OS_USERNAME="your-username"
 export OS_PASSWORD="your-password"
 export OS_PROJECT_NAME="your-project"
@@ -403,7 +403,7 @@ openstack image list
 
 4. Verify bastion can reach OpenStack API:
    ```bash
-   ssh root@${BASTION_IP} "curl -I https://auth.vexxhost.net"
+   ssh root@${BASTION_IP} "curl -I https://auth.openstack.net"
    ```
 
 ### Workflow Timeout
@@ -412,7 +412,7 @@ openstack image list
 
 ```yaml
 jobs:
-  packer-build-vexxhost:
+  packer-build-openstack:
     timeout-minutes: 90 # Increase from default
 ```
 
@@ -499,7 +499,7 @@ on:
 
 ```yaml
 jobs:
-  packer-build-vexxhost:
+  packer-build-openstack:
     environment: production # Requires approval
 ```
 
@@ -525,7 +525,7 @@ jobs:
 - **Network stats:** Bandwidth usage
 - **ACL violations:** Security alerts
 
-### VexxHost Dashboard
+### OpenStack Dashboard
 
 - **Instance status:** Monitor bastion lifecycle
 - **Resource usage:** CPU, RAM, disk, network
@@ -570,7 +570,7 @@ Each matrix job gets its own ephemeral bastion!
 
 1. ✅ **Set up secrets** in GitHub repository
 2. ✅ **Review templates** in `templates/` and `examples/`
-3. ✅ **Test cloud-init** locally with VexxHost CLI
+3. ✅ **Test cloud-init** locally with OpenStack CLI
 4. ✅ **Run workflow** with `workflow_dispatch` first
 5. ✅ **Monitor logs** in GitHub Actions and Tailscale admin
 6. ✅ **Optimize** timing and resource usage
@@ -582,7 +582,7 @@ Each matrix job gets its own ephemeral bastion!
 ## Support & Resources
 
 - **Tailscale Docs:** https://tailscale.com/kb/
-- **VexxHost Docs:** https://docs.vexxhost.com/
+- **OpenStack Docs:** https://docs.openstack.com/
 - **Packer Docs:** https://developer.hashicorp.com/packer/docs
 - **OpenStack CLI:** https://docs.openstack.org/python-openstackclient/
 - **GitHub Actions:** https://docs.github.com/en/actions
@@ -599,7 +599,7 @@ Each matrix job gets its own ephemeral bastion!
 
 - **GitHub Discussions:** Ask questions in this repository
 - **Tailscale Community:** https://forum.tailscale.com/
-- **VexxHost Support:** https://vexxhost.com/support/
+- **OpenStack Support:** https://openstack.com/support/
 - **Packer Community:** https://discuss.hashicorp.com/c/packer/
 
 ---
@@ -612,7 +612,7 @@ graph TD
     B --> C[Connect to Tailscale VPN]
     C --> D[Configure OpenStack CLI]
     D --> E[Generate Cloud-Init Script]
-    E --> F[Launch Bastion on VexxHost]
+    E --> F[Launch Bastion on OpenStack]
     F --> G{Bastion Joins Tailscale?}
     G -->|Yes| H[Get Bastion IP]
     G -->|Timeout| Z[Show Logs & Fail]
