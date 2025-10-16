@@ -149,7 +149,7 @@ jobs:
       # Step 2: Setup OpenStack CLI
       # ========================================
       - name: Setup Python and OpenStack CLI
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
