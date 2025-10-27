@@ -124,7 +124,7 @@ jobs:
       # Step 1: Setup Tailscale VPN
       # ========================================
       - name: Setup Tailscale VPN
-        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3.3.0
+        uses: tailscale/github-action@3a217367cadc62d7600a77470ffe542e2313e6b9 # v4.0.3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
