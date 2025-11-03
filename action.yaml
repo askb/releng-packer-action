@@ -188,7 +188,7 @@ runs:
     # ========================================
     - name: Setup Tailscale VPN (OAuth)
       if: inputs.mode == 'build' && inputs.tailscale_oauth_client_id != '' && inputs.tailscale_oauth_secret != ''
-      uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3.3.0
+      uses: tailscale/github-action@a392da0a182bba0e9613b6243ebd69529b1878aa # v4.1.0
       with:
         oauth-client-id: ${{ inputs.tailscale_oauth_client_id }}
         oauth-secret: ${{ inputs.tailscale_oauth_secret }}
@@ -199,7 +199,7 @@ runs:
 
     - name: Setup Tailscale VPN (Auth Key - Legacy)
       if: inputs.mode == 'build' && (inputs.tailscale_oauth_client_id == '' || inputs.tailscale_oauth_secret == '') && inputs.tailscale_auth_key != ''
-      uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3.3.0
+      uses: tailscale/github-action@a392da0a182bba0e9613b6243ebd69529b1878aa # v4.1.0
       with:
         authkey: ${{ inputs.tailscale_auth_key }}
         version: ${{ inputs.tailscale_version }}
